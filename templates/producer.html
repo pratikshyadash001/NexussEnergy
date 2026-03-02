@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEXUS — Producer Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg:#060918; --bg2:#0B0D20;
+      --surf:rgba(255,255,255,0.04); --surf-h:rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.08); --border-a:rgba(232,99,28,0.3);
+      --A:#E8631C; --A-g:rgba(232,99,28,0.18); --A-d:rgba(232,99,28,0.10);
+      --cyan:#00CED4; --gold:#F5A623; --green:#10B981; --rose:#F43F5E; --violet:#8B5CF6;
+      --text:#EEF2FF; --text-dim:rgba(238,242,255,0.5); --text-faint:rgba(238,242,255,0.25);
+      --sidebar-w:240px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Mulish',sans-serif;overflow:hidden;}
+    ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-thumb{background:var(--border-a);border-radius:2px;}
+
+    /* MESH */
+    body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 700px 500px at 100% -10%,rgba(232,99,28,0.10) 0%,transparent 60%),
+                 radial-gradient(ellipse 400px 400px at 0% 100%,rgba(0,206,212,0.06) 0%,transparent 60%);}
+
+    /* ─── SIDEBAR ─── */
+    .sidebar{
+      position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
+      background:rgba(6,9,24,0.97);
+      border-right:1px solid var(--border-a);
+      display:flex;flex-direction:column;padding:24px 0;
+      z-index:200;backdrop-filter:blur(20px);
+    }
+    .s-brand{display:flex;align-items:center;gap:10px;padding:0 20px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+    .s-brand-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--A),#FF8C4C);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .s-brand-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;}
+    .s-brand-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--A);background:var(--A-d);padding:2px 8px;border-radius:3px;margin-top:3px;}
+
+    .s-section{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);padding:0 20px 8px;text-transform:uppercase;}
+    .nav{display:flex;align-items:center;gap:11px;padding:10px 20px;font-family:'Mulish',sans-serif;font-size:13px;font-weight:500;color:var(--text-dim);cursor:pointer;border-left:2px solid transparent;transition:all 0.15s;}
+    .nav:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+    .nav.on{color:var(--A);border-left-color:var(--A);background:var(--A-d);}
+    .nav .ni{font-size:15px;width:20px;text-align:center;}
+    .s-spacer{flex:1;}
+
+    /* WEATHER WIDGET */
+    .s-weather{margin:0 12px 12px;padding:14px;background:var(--surf);border:1px solid var(--border-a);border-radius:12px;}
+    .sw-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:8px;}
+    .sw-temp{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--A);line-height:1;}
+    .sw-cond{font-family:'Mulish',sans-serif;font-size:11px;color:var(--text-dim);margin-top:4px;}
+    .sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;}
+    .sw-item{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .sw-item span{color:var(--text-dim);}
+
+    /* USER */
+    .s-user{margin:0 12px 10px;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;gap:10px;}
+    .s-avatar{width:38px;height:38px;background:var(--A-d);border:2px solid var(--border-a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .s-uname{font-family:'Mulish',sans-serif;font-weight:600;font-size:12px;}
+    .s-urole{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--A);background:var(--A-d);padding:2px 7px;border-radius:3px;margin-top:3px;display:inline-block;}
+    .s-logout{margin:0 12px 16px;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.2);border-radius:8px;color:var(--rose);font-family:'Mulish',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+    .s-logout:hover{background:rgba(244,63,94,0.15);transform:translateY(-1px);}
+
+    /* ─── MAIN ─── */
+    .main{margin-left:var(--sidebar-w);height:100vh;overflow-y:auto;padding:28px 28px 40px;position:relative;z-index:10;}
+
+    /* TOPBAR */
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+    .page-h{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
+    .page-h span{color:var(--A);}
+    .topbar-r{display:flex;align-items:center;gap:10px;}
+    .w-pill{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--border-a);border-radius:8px;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--A);}
+    .btn-add{padding:9px 18px;background:linear-gradient(135deg,var(--A),#FF8C4C);color:white;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+    .btn-add:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(232,99,28,0.35);}
+
+    /* POLICY BANNER */
+    .policy-bar{padding:10px 16px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.2);border-radius:8px;display:flex;align-items:center;gap:12px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(245,166,35,0.8);}
+
+    /* METRICS */
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+    .metric{padding:18px 20px;background:var(--surf);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden;transition:all 0.2s;cursor:default;}
+    .metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--A));}
+    .metric:hover{border-color:var(--border-a);transform:translateY(-2px);}
+    .m-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px;}
+    .m-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--mc,var(--A));}
+    .m-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:5px;}
+
+    /* GRID */
+    .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-bottom:18px;}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+
+    /* CARD */
+    .card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color 0.2s;}
+    .card:hover{border-color:var(--border-a);}
+    .c-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .c-title a{color:var(--A);text-decoration:none;font-size:9px;cursor:pointer;}
+
+    /* MAP */
+    #prod-map{height:320px;border-radius:10px;overflow:hidden;border:1px solid var(--border-a);}
+    .leaflet-tile{filter:brightness(0.25) saturate(0.4) hue-rotate(200deg) !important;}
+    .leaflet-control-attribution{display:none;}
+
+    /* LISTINGS */
+    .listing-list{display:flex;flex-direction:column;gap:8px;}
+    .listing-item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surf);border:1px solid var(--border);border-radius:10px;transition:all 0.2s;}
+    .listing-item:hover{border-color:var(--border-a);background:var(--surf-h);}
+    .li-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;}
+    .li-info{flex:1;}
+    .li-name{font-family:'Mulish',sans-serif;font-weight:600;font-size:13px;}
+    .li-meta{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:2px;letter-spacing:1px;}
+    .li-price{text-align:right;}
+    .li-pval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--A);}
+    .li-dir{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;margin-top:3px;display:inline-block;}
+    .dir-up{background:rgba(244,63,94,0.1);color:var(--rose);}
+    .dir-down{background:rgba(16,185,129,0.1);color:var(--green);}
+    .dir-n{background:rgba(245,166,35,0.1);color:var(--gold);}
+    .li-actions{display:flex;gap:6px;margin-left:8px;}
+    .li-btn{padding:5px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;transition:all 0.2s;border:1px solid;}
+    .li-edit{border-color:var(--border-a);color:var(--A);background:var(--A-d);}
+    .li-edit:hover{background:var(--A-g);}
+    .li-del{border-color:rgba(244,63,94,0.3);color:var(--rose);background:rgba(244,63,94,0.08);}
+    .li-del:hover{background:rgba(244,63,94,0.15);}
+
+    /* WEATHER IMPACT */
+    .w-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+    .w-item{padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;}
+    .w-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);letter-spacing:1px;margin-bottom:3px;}
+    .w-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;line-height:1;}
+    .impact{padding:10px 12px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.5;margin-top:8px;}
+    .imp-good{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:var(--green);}
+    .imp-bad{background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.2);color:var(--rose);}
+    .imp-neutral{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);color:var(--gold);}
+
+    /* RECENT SALES */
+    .tx-list{display:flex;flex-direction:column;}
+    .tx-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .tx-row:last-child{border-bottom:none;}
+    .tx-icon{font-size:16px;flex-shrink:0;}
+    .tx-info{flex:1;}
+    .tx-names{font-family:'Mulish',sans-serif;font-size:12px;color:var(--text-dim);}
+    .tx-hash{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:2px;}
+    .tx-cost{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--green);text-align:right;}
+
+    /* CARBON */
+    .carbon-ring-w{display:flex;flex-direction:column;align-items:center;padding:10px 0;}
+    .carbon-ring{width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--A) 0% var(--p,0%),rgba(255,255,255,0.06) var(--p,0%) 100%);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:10px;}
+    .carbon-ring::before{content:'';position:absolute;width:86px;height:86px;border-radius:50%;background:var(--bg2);}
+    .cr-inner{position:relative;z-index:1;text-align:center;}
+    .cr-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--A);line-height:1;}
+    .cr-unit{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);}
+    .cr-rank{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--A);letter-spacing:2px;margin-top:4px;}
+    .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;}
+    .badge-on{background:var(--A-d);border:1px solid var(--border-a);color:var(--A);}
+    .badge-off{background:var(--surf);border:1px solid var(--border);color:var(--text-faint);}
+
+    /* AI CHAT */
+    .ai-chat{display:flex;flex-direction:column;height:360px;}
+    .chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0;}
+    .msg{max-width:85%;padding:10px 14px;border-radius:12px;font-family:'Mulish',sans-serif;font-size:13px;line-height:1.6;}
+    .msg-ai{background:var(--A-d);border:1px solid var(--border-a);color:var(--text);align-self:flex-start;border-radius:4px 12px 12px 12px;}
+    .msg-user{background:rgba(255,255,255,0.06);color:var(--text-dim);align-self:flex-end;border-radius:12px 4px 12px 12px;}
+    .chat-input-row{display:flex;gap:8px;margin-top:10px;}
+    .chat-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Mulish',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color 0.2s;}
+    .chat-input:focus{border-color:var(--A);}
+    .chat-send{padding:10px 16px;background:var(--A);color:white;border:none;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
+    .chat-send:hover{background:#FF8C4C;}
+    .aria-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+    .aria-avatar{width:32px;height:32px;background:var(--A-g);border:1px solid var(--border-a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;}
+    .aria-info{font-family:'IBM Plex Mono',monospace;}
+    .aria-name{font-size:11px;color:var(--A);font-weight:500;}
+    .aria-status{font-size:8px;color:var(--text-faint);letter-spacing:1px;}
+
+    /* SECTION PAGES */
+    .page-sec{display:none;}
+    .page-sec.on{display:block;}
+
+    /* LIVE DOT */
+    .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:ldpulse 2s infinite;margin-right:4px;}
+    @keyframes ldpulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+    /* MODAL */
+    .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+    .modal-ov.open{opacity:1;pointer-events:all;}
+    .modal{background:#0B0D20;border:1px solid var(--border-a);border-radius:16px;padding:30px;width:500px;max-width:90vw;transform:scale(0.92);transition:transform 0.3s;max-height:90vh;overflow-y:auto;}
+    .modal-ov.open .modal{transform:scale(1);}
+    .modal-h{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+    .modal-x{color:var(--text-faint);cursor:pointer;font-size:20px;}
+    .fg{margin-bottom:14px;}
+    .fg label{display:block;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px;}
+    .fg input,.fg select,.fg textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Mulish',sans-serif;color:var(--text);font-size:14px;outline:none;transition:border-color 0.2s;}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--A);}
+    .fg select option{background:#0B0D20;}
+    .fg textarea{resize:vertical;min-height:80px;}
+    .grid2-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .btn-modal{width:100%;padding:13px;background:linear-gradient(135deg,var(--A),#FF8C4C);color:white;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:all 0.2s;}
+    .btn-modal:hover{box-shadow:0 8px 25px rgba(232,99,28,0.35);}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:28px;right:28px;background:#0B0D20;border:1px solid var(--A);border-radius:12px;padding:14px 18px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--A);z-index:9999;max-width:360px;line-height:1.5;transform:translateY(80px);opacity:0;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);backdrop-filter:blur(20px);}
+    .toast.show{transform:translateY(0);opacity:1;}
+
+    /* HASH STEPS */
+    .hash-steps{display:flex;flex-direction:column;gap:6px;margin:14px 0;}
+    .h-step{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--A-d);border:1px solid var(--border-a);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(232,99,28,0.7);opacity:0;transform:translateX(-10px);transition:all 0.4s;}
+    .h-step.vis{opacity:1;transform:translateX(0);}
+
+    .hidden{display:none!important;}
+    .price-preview{padding:14px;border-radius:10px;background:var(--A-d);border:1px solid var(--border-a);margin:14px 0;}
+    .pp-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .pp-row:last-child{border-bottom:none;}
+    .pp-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .pp-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);}
+    .pp-final{color:var(--A);font-size:15px;font-weight:700;}
+
+    /* SMART BARS */
+    .switch-bars{display:flex;flex-direction:column;gap:10px;}
+    .sbar{display:flex;align-items:center;gap:10px;}
+    .sbar-lbl{font-family:'Mulish',sans-serif;font-size:12px;width:60px;color:var(--text-dim);}
+    .sbar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+    .sbar-fill{height:100%;border-radius:3px;transition:width 1s ease;}
+    .sbar-score{font-family:'IBM Plex Mono',monospace;font-size:10px;width:30px;text-align:right;}
+    .rec-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;margin-top:10px;background:var(--A-d);border:1px solid var(--border-a);color:var(--A);}
+  </style>
+</head>
+<body>
+
+<!-- ──── SIDEBAR ──── -->
+<aside class="sidebar">
+  <div class="s-brand">
+    <div class="s-brand-icon">⚡</div>
+    <div>
+      <div class="s-brand-name">NEXUS</div>
+      <div class="s-brand-role">PRODUCER PORTAL</div>
+    </div>
+  </div>
+
+  <div class="s-section">Dashboard</div>
+  <div class="nav on" onclick="goTo('overview',this)"><span class="ni">📊</span>Overview</div>
+  <div class="nav" onclick="goTo('listings',this)"><span class="ni">⚡</span>My Listings</div>
+  <div class="nav" onclick="goTo('map',this)"><span class="ni">🗺️</span>Grid Map</div>
+  <div class="nav" onclick="goTo('sales',this)"><span class="ni">💰</span>Sales History</div>
+
+  <div class="s-section" style="margin-top:12px">Analytics</div>
+  <div class="nav" onclick="goTo('carbon',this)"><span class="ni">🌱</span>Carbon Credits</div>
+  <div class="nav" onclick="goTo('aria',this)"><span class="ni">🤖</span>ARIA Advisor</div>
+  <a class="nav" href="/ledger"><span class="ni">🔗</span>P2P Ledger</a>
+
+  <div class="s-spacer"></div>
+
+  <div class="s-weather">
+    <div class="sw-label">⬡ LIVE WEATHER</div>
+    <div class="sw-temp" id="sw-t">—°C</div>
+    <div class="sw-cond" id="sw-c">Loading...</div>
+    <div class="sw-grid">
+      <div class="sw-item">☁️ <span id="sw-cl">—</span>%</div>
+      <div class="sw-item">💨 <span id="sw-w">—</span>km/h</div>
+      <div class="sw-item">💧 <span id="sw-h">—</span>%</div>
+      <div class="sw-item">🌡️ <span id="sw-p">—</span>hPa</div>
+    </div>
+  </div>
+
+  <div class="s-user">
+    <div class="s-avatar">⚡</div>
+    <div>
+      <div class="s-uname" id="s-uname">Loading...</div>
+      <div class="s-urole" id="s-urole">PRODUCER</div>
+    </div>
+  </div>
+  <div class="s-logout" onclick="doLogout()"><span>🚪</span> Sign Out</div>
+</aside>
+
+<!-- ──── MAIN ──── -->
+<main class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <h1 class="page-h" id="page-h">Producer <span>Overview</span></h1>
+    <div class="topbar-r">
+      <div class="w-pill" id="w-pill">⛅ Loading weather...</div>
+      <button class="btn-add" onclick="openListingModal()">+ LIST ENERGY</button>
+    </div>
+  </div>
+
+  <!-- POLICY BAR -->
+  <div class="policy-bar">
+    ⚖️ &nbsp;ETHICAL FRAMEWORK ACTIVE — Price floor ₹<span id="pp-floor">1.50</span>/kWh | Ceiling ₹<span id="pp-cap">12.00</span>/kWh | Subsidies auto-applied
+  </div>
+
+  <!-- ─── OVERVIEW ─── -->
+  <div id="s-overview" class="page-sec on">
+    <div class="metrics">
+      <div class="metric" style="--mc:var(--A)">
+        <div class="m-lbl">Total Earned</div>
+        <div class="m-val" id="m-earn">—</div>
+        <div class="m-sub">lifetime revenue</div>
+      </div>
+      <div class="metric" style="--mc:var(--cyan)">
+        <div class="m-lbl">kWh Sold</div>
+        <div class="m-val" id="m-kwh">—</div>
+        <div class="m-sub">this month</div>
+      </div>
+      <div class="metric" style="--mc:var(--green)">
+        <div class="m-lbl">Active Listings</div>
+        <div class="m-val" id="m-list">—</div>
+        <div class="m-sub">live on marketplace</div>
+      </div>
+      <div class="metric" style="--mc:var(--gold)">
+        <div class="m-lbl">CO₂ Credits</div>
+        <div class="m-val" id="m-co2">—</div>
+        <div class="m-sub">kg offset generated</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- MAP -->
+      <div class="card">
+        <div class="c-title">🗺️ GRID MAP — YOUR NODES <span><span class="live-dot"></span>LIVE</span></div>
+        <div id="prod-map"></div>
+        <div style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint)">Your listings are shown as orange nodes · Click to edit</div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- WEATHER ENGINE -->
+        <div class="card">
+          <div class="c-title">🌤️ WEATHER PRICING ENGINE</div>
+          <div class="w-grid">
+            <div class="w-item"><div class="w-lbl">TEMPERATURE</div><div class="w-val" id="wt" style="color:var(--gold)">—°C</div></div>
+            <div class="w-item"><div class="w-lbl">CLOUD COVER</div><div class="w-val" id="wc" style="color:var(--cyan)">—%</div></div>
+            <div class="w-item"><div class="w-lbl">WIND SPEED</div><div class="w-val" id="ww" style="color:var(--violet)">—</div></div>
+            <div class="w-item"><div class="w-lbl">HUMIDITY</div><div class="w-val" id="wh" style="color:var(--green)">—%</div></div>
+          </div>
+          <div class="impact imp-neutral" id="w-impact">Loading pricing impact...</div>
+        </div>
+
+        <!-- SMART SWITCH -->
+        <div class="card">
+          <div class="c-title">🔀 OPTIMAL ENERGY TYPE NOW</div>
+          <div class="switch-bars">
+            <div class="sbar">
+              <span class="sbar-lbl">☀️ Solar</span>
+              <div class="sbar-track"><div class="sbar-fill" id="b-solar" style="background:#F5A623"></div></div>
+              <span class="sbar-score" id="sc-solar" style="color:#F5A623">—</span>
+            </div>
+            <div class="sbar">
+              <span class="sbar-lbl">💨 Wind</span>
+              <div class="sbar-track"><div class="sbar-fill" id="b-wind" style="background:var(--cyan)"></div></div>
+              <span class="sbar-score" id="sc-wind" style="color:var(--cyan)">—</span>
+            </div>
+            <div class="sbar">
+              <span class="sbar-lbl">🌿 Biogas</span>
+              <div class="sbar-track"><div class="sbar-fill" id="b-bio" style="background:var(--green)"></div></div>
+              <span class="sbar-score" id="sc-bio" style="color:var(--green)">—</span>
+            </div>
+          </div>
+          <div class="rec-badge" id="rec-badge">⚡ LOADING RECOMMENDATION...</div>
+        </div>
+
+        <!-- RECENT SALES -->
+        <div class="card">
+          <div class="c-title">💰 RECENT SALES <a onclick="goTo('sales',null)">VIEW ALL →</a></div>
+          <div class="tx-list" id="recent-sales">
+            <div style="text-align:center;padding:16px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint)">No sales yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MY LISTINGS ─── -->
+  <div id="s-listings" class="page-sec">
+    <div class="card">
+      <div class="c-title">⚡ MY ENERGY LISTINGS <button onclick="openListingModal()" style="padding:5px 14px;background:var(--A);color:white;border:none;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;">+ ADD LISTING</button></div>
+      <div class="listing-list" id="my-listings">
+        <div style="text-align:center;padding:30px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint)">No listings yet. Add your first energy listing!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MAP ─── -->
+  <div id="s-map" class="page-sec">
+    <div class="card">
+      <div class="c-title">🗺️ FULL GRID MAP — ALL PRODUCERS</div>
+      <div id="full-map" style="height:500px;border-radius:10px;border:1px solid var(--border-a)"></div>
+    </div>
+  </div>
+
+  <!-- ─── SALES HISTORY ─── -->
+  <div id="s-sales" class="page-sec">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px;">
+      <div class="card">
+        <div class="c-title">💰 SALES HISTORY</div>
+        <div id="sales-list" style="display:flex;flex-direction:column;gap:0;max-height:500px;overflow-y:auto;"></div>
+      </div>
+      <div class="card">
+        <div class="c-title">📊 EARNINGS SUMMARY</div>
+        <div style="font-family:'Mulish',sans-serif;font-size:13px;color:var(--text-dim);line-height:2.5;">
+          <div>Total Transactions: <span style="color:var(--A)" id="es-tx">0</span></div>
+          <div>Total kWh Sold: <span style="color:var(--cyan)" id="es-kwh">0</span></div>
+          <div>Gross Revenue: <span style="color:var(--green)" id="es-rev">₹0</span></div>
+          <div>Avg Price/kWh: <span style="color:var(--gold)" id="es-avg">₹0</span></div>
+          <div>CO₂ Facilitated: <span style="color:var(--green)" id="es-co2">0 kg</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CARBON ─── -->
+  <div id="s-carbon" class="page-sec">
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:18px;">
+      <div class="card" style="text-align:center;">
+        <div class="c-title" style="justify-content:center;">🌱 CARBON SCORE</div>
+        <div class="carbon-ring-w">
+          <div class="carbon-ring" id="c-ring">
+            <div class="cr-inner">
+              <div class="cr-val" id="c-val">0</div>
+              <div class="cr-unit">kg CO₂</div>
+            </div>
+          </div>
+          <div class="cr-rank" id="c-rank">GREEN RANK</div>
+          <div style="font-family:'Mulish',sans-serif;font-size:12px;color:var(--text-dim);margin-top:4px;" id="c-cred">0 Green Credits</div>
+        </div>
+        <div class="badges" id="c-badges" style="justify-content:center;"></div>
+      </div>
+      <div class="card">
+        <div class="c-title">🏆 BADGES & ACHIEVEMENTS</div>
+        <div id="badge-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;"></div>
+        <div style="margin-top:18px;padding:14px;background:var(--A-d);border:1px solid var(--border-a);border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(232,99,28,0.7);line-height:1.8;">
+          Formula: 1 kWh traded = 0.82 kg CO₂ saved<br>
+          1 kg CO₂ = 0.5 Green Credits<br>
+          Credits → platform fee discounts
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ARIA ─── -->
+  <div id="s-aria" class="page-sec">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px;">
+      <div class="card">
+        <div class="aria-header">
+          <div class="aria-avatar">🤖</div>
+          <div class="aria-info">
+            <div class="aria-name">ARIA — Producer Advisor</div>
+            <div class="aria-status"><span class="live-dot"></span>ONLINE · WEATHER-AWARE</div>
+          </div>
+        </div>
+        <div class="ai-chat">
+          <div class="chat-messages" id="chat-msgs">
+            <div class="msg msg-ai">👋 Hello! I'm ARIA, your AI energy advisor. I have access to real-time weather data and market pricing. Ask me anything about optimal pricing, when to list energy, or how to maximize your earnings as a producer!</div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-input" id="chat-in" placeholder="Ask ARIA..." onkeydown="if(event.key==='Enter')sendChat()"/>
+            <button class="chat-send" onclick="sendChat()">SEND</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="c-title">💡 QUICK INSIGHTS</div>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="quick-insights">
+          <div style="padding:12px;background:var(--A-d);border:1px solid var(--border-a);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(232,99,28,0.8);line-height:1.6;">Loading weather-based insights...</div>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="c-title">SUGGESTED QUESTIONS</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button onclick="askARIA('When is the best time to list my solar energy today?')" style="padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">📅 Best time to list solar today?</button>
+            <button onclick="askARIA('How should I price my wind energy given current conditions?')" style="padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">💰 How to price wind energy?</button>
+            <button onclick="askARIA('How can I maximize my earnings this week?')" style="padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">📈 Maximize earnings this week?</button>
+            <button onclick="askARIA('What is the carbon credit system and how do I earn more?')" style="padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">🌱 How to earn more carbon credits?</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ──── LISTING MODAL ──── -->
+<div class="modal-ov" id="listing-modal" onclick="if(event.target===this)closeModal('listing-modal')">
+  <div class="modal">
+    <div class="modal-h">⚡ ADD ENERGY LISTING <span class="modal-x" onclick="closeModal('listing-modal')">×</span></div>
+    <div class="fg">
+      <label>Energy Type</label>
+      <select id="l-type">
+        <option value="solar">☀️ Solar</option>
+        <option value="wind">💨 Wind</option>
+        <option value="biogas">🌿 Biogas</option>
+      </select>
+    </div>
+    <div class="grid2-form">
+      <div class="fg"><label>Base Price (₹/kWh)</label><input type="number" id="l-price" placeholder="e.g. 3.20" step="0.1" min="1.5" max="12"/></div>
+      <div class="fg"><label>Available kWh</label><input type="number" id="l-kwh" placeholder="e.g. 200"/></div>
+    </div>
+    <div class="grid2-form">
+      <div class="fg"><label>Capacity (kW)</label><input type="number" id="l-cap" placeholder="e.g. 50"/></div>
+      <div class="fg"><label>City / Location</label><input type="text" id="l-city" placeholder="e.g. Indore" id="l-city"/></div>
+    </div>
+    <div class="fg"><label>Description (optional)</label><textarea id="l-desc" placeholder="Describe your energy source, quality, certifications..."></textarea></div>
+    <div style="padding:10px 12px;background:var(--A-d);border:1px solid var(--border-a);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(232,99,28,0.7);margin-bottom:14px;">
+      ⚖️ Your price will be adjusted by weather modifier · subsidy · distance fee. Final price shown to buyers.
+    </div>
+    <button class="btn-modal" onclick="submitListing()">LIST ENERGY →</button>
+  </div>
+</div>
+
+<!-- ──── LOGOUT CONFIRM ──── -->
+<div class="modal-ov" id="logout-modal" onclick="if(event.target===this)closeModal('logout-modal')">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">🚪</div>
+    <div class="modal-h" style="justify-content:center;font-size:20px;">Sign Out of NEXUS</div>
+    <div style="font-family:'Mulish',sans-serif;font-size:14px;color:var(--text-dim);margin-bottom:24px;">Are you sure you want to sign out?</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeModal('logout-modal')" style="flex:1;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-family:'Syne',sans-serif;font-size:14px;cursor:pointer;">CANCEL</button>
+      <button onclick="confirmLogout()" style="flex:1;padding:12px;background:var(--rose);color:white;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;cursor:pointer;">SIGN OUT</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ─────────────────────────────────────────
+let user = null, token = '', weather = {}, myListings = [], myTxs = [];
+let userLat = 22.7196, userLon = 75.8577;
+let map = null, mapFull = null;
+
+// ─── INIT ──────────────────────────────────────────
+window.onload = async function() {
+  user = JSON.parse(localStorage.getItem('nx_user') || 'null');
+  token = localStorage.getItem('nx_token') || '';
+  if (!user) { window.location.href = '/'; return; }
+  if (user.role !== 'producer' && !user.demo) { window.location.href = '/'; return; }
+
+  userLat = user.location_lat || 22.7196;
+  userLon = user.location_lon || 75.8577;
+  document.getElementById('s-uname').textContent = user.name || user.full_name || 'Producer';
+  document.getElementById('s-urole').textContent = 'PRODUCER';
+
+  // Get live location if available
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      loadAll();
+    }, () => loadAll());
+  } else loadAll();
+};
+
+async function loadAll() {
+  await loadWeather();
+  await loadMyListings();
+  await loadMyTxs();
+  await loadSmartSwitch();
+  loadPolicy();
+  initMap();
+  renderCarbonSection();
+  loadQuickInsights();
+  setInterval(async () => { await loadWeather(); await loadSmartSwitch(); }, 60000);
+}
+
+function api(path, opts={}) {
+  return fetch(path, {
+    ...opts,
+    headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+token, ...(opts.headers||{})}
+  }).then(r => r.json());
+}
+
+// ─── WEATHER ───────────────────────────────────────
+async function loadWeather() {
+  try {
+    weather = await api(`/api/weather?lat=${userLat}&lon=${userLon}`);
+    renderWeather(weather);
+  } catch(e) {
+    weather = {temp:28,feels_like:30,clouds:35,wind_speed:14,humidity:58,condition:'Demo Mode',icon:'⛅',city:'Demo'};
+    renderWeather(weather);
+  }
+}
+function renderWeather(w) {
+  const f = v => v ?? '—';
+  document.getElementById('w-pill').textContent = `${w.icon} ${w.city} ${f(w.temp)}°C | ☁️${f(w.clouds)}% | 💨${f(w.wind_speed)}km/h`;
+  document.getElementById('sw-t').textContent = f(w.temp)+'°C';
+  document.getElementById('sw-c').textContent = `${w.icon} ${w.condition}`;
+  document.getElementById('sw-cl').textContent = f(w.clouds);
+  document.getElementById('sw-w').textContent = f(w.wind_speed);
+  document.getElementById('sw-h').textContent = f(w.humidity);
+  document.getElementById('sw-p').textContent = f(w.pressure);
+  document.getElementById('wt').textContent = f(w.temp)+'°C';
+  document.getElementById('wc').textContent = f(w.clouds)+'%';
+  document.getElementById('ww').textContent = f(w.wind_speed)+' km/h';
+  document.getElementById('wh').textContent = f(w.humidity)+'%';
+  // Impact
+  const imp = document.getElementById('w-impact');
+  const c = w.clouds||35; const wind = w.wind_speed||14;
+  if (c < 25) { imp.className='impact imp-good'; imp.textContent='✓ CLEAR SKIES — Solar surplus active. Lower solar prices. Wind at normal rates. Good time for solar producers to list.'; }
+  else if (c > 65) { imp.className='impact imp-bad'; imp.textContent='⚠ HEAVY CLOUD COVER — Solar output reduced. Solar prices elevated (scarcity premium). Wind & biogas producers benefit now.'; }
+  else { imp.className='impact imp-neutral'; imp.textContent=`◉ MODERATE CONDITIONS (${c}% cloud, ${wind}km/h wind) — Standard market pricing active across all energy types.`; }
+}
+
+// ─── LISTINGS ──────────────────────────────────────
+async function loadMyListings() {
+  try {
+    myListings = await api('/api/listings/mine');
+  } catch(e) { myListings = []; }
+  renderMyListings(myListings);
+  document.getElementById('m-list').textContent = myListings.filter(l=>l.is_active!==false).length;
+  initMap();
+}
+
+function renderMyListings(listings) {
+  const el = document.getElementById('my-listings');
+  if (!listings.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint)">No listings yet. Create your first listing!</div>';
+    return;
+  }
+  const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+  el.innerHTML = listings.map(l => {
+    // Calculate live price
+    const lat = l.location_lat||userLat, lon = l.location_lon||userLon;
+    const dist = calcDist(userLat,userLon,lat,lon);
+    return `
+    <div class="listing-item" id="li-${l.id}">
+      <span class="li-icon">${icons[l.energy_type]||'⚡'}</span>
+      <div class="li-info">
+        <div class="li-name">${l.producer_name||user.name||'My Farm'} — ${l.energy_type?.toUpperCase()}</div>
+        <div class="li-meta">${l.available_kwh} kWh available · ₹${l.base_price}/kWh base · ${l.location_city||'Location'} · ${dist.toFixed(1)}km</div>
+        ${l.description ? `<div class="li-meta" style="margin-top:3px;color:var(--text-faint)">${l.description.substring(0,60)}</div>` : ''}
+      </div>
+      <div class="li-price">
+        <div class="li-pval">₹${l.base_price}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint)">/kWh base</div>
+        <div class="li-dir ${l.is_active===false?'dir-n':'dir-down'}">${l.is_active===false?'INACTIVE':'ACTIVE'}</div>
+      </div>
+      <div class="li-actions">
+        <button class="li-btn li-edit" onclick="editListing('${l.id}')">EDIT</button>
+        <button class="li-btn li-del" onclick="deleteListing('${l.id}')">DELETE</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcDist(lat1,lon1,lat2,lon2) {
+  const R=6371, dlat=((lat2-lat1)*Math.PI/180), dlon=((lon2-lon1)*Math.PI/180);
+  const a=Math.sin(dlat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dlon/2)**2;
+  return R*2*Math.asin(Math.sqrt(a));
+}
+
+async function submitListing() {
+  const etype = document.getElementById('l-type').value;
+  const price = parseFloat(document.getElementById('l-price').value);
+  const kwh = parseFloat(document.getElementById('l-kwh').value);
+  const cap = parseFloat(document.getElementById('l-cap').value)||0;
+  const city = document.getElementById('l-city').value||user.location_city||'';
+  const desc = document.getElementById('l-desc').value;
+  if (!price||!kwh) { toast('Fill required fields (price & kWh)', false); return; }
+  try {
+    const result = await api('/api/listings/create', {
+      method:'POST',
+      body: JSON.stringify({energy_type:etype,base_price:price,available_kwh:kwh,capacity_kw:cap,city,description:desc,lat:userLat,lon:userLon})
+    });
+    if (result.id) {
+      toast(`✓ Listing created! ${kwh} kWh ${etype} @ ₹${price}/kWh`, true);
+      closeModal('listing-modal');
+      loadMyListings();
+    } else toast(result.error||'Failed to create listing', false);
+  } catch(e) { toast('Connection error. Check your backend.', false); }
+}
+
+async function deleteListing(lid) {
+  if (!confirm('Delete this listing?')) return;
+  try {
+    await api(`/api/listings/${lid}`, {method:'DELETE'});
+    toast('Listing deleted', true);
+    loadMyListings();
+  } catch(e) { toast('Error deleting listing', false); }
+}
+
+function editListing(lid) {
+  const l = myListings.find(x=>x.id===lid);
+  if (!l) return;
+  document.getElementById('l-type').value = l.energy_type;
+  document.getElementById('l-price').value = l.base_price;
+  document.getElementById('l-kwh').value = l.available_kwh;
+  document.getElementById('l-cap').value = l.capacity_kw||'';
+  document.getElementById('l-city').value = l.location_city||'';
+  document.getElementById('l-desc').value = l.description||'';
+  openModal('listing-modal');
+}
+
+// ─── MY TXs ────────────────────────────────────────
+async function loadMyTxs() {
+  try { myTxs = await api('/api/transactions/mine'); } catch(e) { myTxs = []; }
+  renderRecentSales(myTxs.slice(0,5));
+  renderSalesSection(myTxs);
+  updateEarningsSummary(myTxs);
+  document.getElementById('m-earn').textContent = '₹'+myTxs.reduce((s,t)=>s+parseFloat(t.total_cost||0),0).toFixed(0);
+  document.getElementById('m-kwh').textContent = myTxs.reduce((s,t)=>s+parseFloat(t.kwh||0),0).toFixed(0);
+}
+
+function renderRecentSales(txs) {
+  const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+  const el = document.getElementById('recent-sales');
+  if (!txs.length) { el.innerHTML='<div style="text-align:center;padding:16px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint)">No sales yet</div>'; return; }
+  el.innerHTML = txs.map(tx=>`
+    <div class="tx-row">
+      <span class="tx-icon">${icons[tx.energy_type]||'⚡'}</span>
+      <div class="tx-info">
+        <div class="tx-names">${tx.to_name||'Consumer'} bought ${tx.kwh} kWh</div>
+        <div class="tx-hash">${tx.short_hash||'—'} · ${new Date(tx.created_at).toLocaleString()}</div>
+      </div>
+      <div class="tx-cost">₹${parseFloat(tx.total_cost||0).toFixed(2)}</div>
+    </div>
+  `).join('');
+}
+
+function renderSalesSection(txs) {
+  const el = document.getElementById('sales-list');
+  const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+  el.innerHTML = txs.map(tx=>`
+    <div class="tx-row">
+      <span class="tx-icon">${icons[tx.energy_type]||'⚡'}</span>
+      <div class="tx-info">
+        <div class="tx-names">${tx.from_name||'—'} → ${tx.to_name||'Consumer'}</div>
+        <div class="tx-hash">${tx.kwh||0} kWh · ₹${tx.final_price||0}/kWh · ${tx.short_hash||'—'} · ${new Date(tx.created_at).toLocaleDateString()}</div>
+      </div>
+      <div class="tx-cost">₹${parseFloat(tx.total_cost||0).toFixed(2)}</div>
+    </div>
+  `).join('');
+}
+
+function updateEarningsSummary(txs) {
+  const total = txs.reduce((s,t)=>s+parseFloat(t.total_cost||0),0);
+  const kwh = txs.reduce((s,t)=>s+parseFloat(t.kwh||0),0);
+  const co2 = txs.reduce((s,t)=>s+parseFloat(t.carbon_saved||0),0);
+  document.getElementById('es-tx').textContent = txs.length;
+  document.getElementById('es-kwh').textContent = kwh.toFixed(1);
+  document.getElementById('es-rev').textContent = '₹'+total.toFixed(2);
+  document.getElementById('es-avg').textContent = txs.length ? '₹'+(total/kwh).toFixed(2) : '₹0';
+  document.getElementById('es-co2').textContent = co2.toFixed(1)+' kg';
+}
+
+// ─── SMART SWITCH ──────────────────────────────────
+async function loadSmartSwitch() {
+  try {
+    const d = await api(`/api/smart-switch?lat=${userLat}&lon=${userLon}`);
+    const s = d.scores;
+    document.getElementById('b-solar').style.width = s.solar+'%';
+    document.getElementById('b-wind').style.width = s.wind+'%';
+    document.getElementById('b-bio').style.width = s.biogas+'%';
+    document.getElementById('sc-solar').textContent = Math.round(s.solar);
+    document.getElementById('sc-wind').textContent = Math.round(s.wind);
+    document.getElementById('sc-bio').textContent = Math.round(s.biogas);
+    const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+    document.getElementById('rec-badge').textContent = `${icons[d.recommended]||'⚡'} BEST TO LIST NOW: ${d.recommended.toUpperCase()} (score: ${Math.round(s[d.recommended])}/100)`;
+  } catch(e) {}
+}
+
+// ─── MAP ───────────────────────────────────────────
+function initMap() {
+  if (map) { return; }
+  try {
+    map = L.map('prod-map', {center:[userLat,userLon],zoom:11,zoomControl:true,attributionControl:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    addProducerNodes(map, myListings);
+    // Add consumer location
+    L.circleMarker([userLat,userLon],{radius:8,fillColor:'#E8631C',fillOpacity:0.9,color:'#FF8C4C',weight:2}).addTo(map).bindPopup('📍 Your Location');
+  } catch(e) {
+    document.getElementById('prod-map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--text-faint)">Map requires internet connection</div>';
+  }
+}
+
+function addProducerNodes(mapInst, listings) {
+  const colors = {solar:'#F5A623',wind:'#00CED4',biogas:'#10B981'};
+  const icons2 = {solar:'☀️',wind:'💨',biogas:'🌿'};
+  (listings||[]).filter(l=>l.location_lat&&l.location_lon).forEach(l=>{
+    const c = colors[l.energy_type]||'#E8631C';
+    const html = `<div style="width:36px;height:36px;border-radius:50%;background:${c}22;border:2px solid ${c};display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative;">
+      <div style="position:absolute;inset:-5px;border-radius:50%;border:2px solid ${c};animation:ripple 2s ease-out infinite;opacity:0.5;"></div>
+      ${icons2[l.energy_type]||'⚡'}</div>`;
+    const icon = L.divIcon({html,className:'',iconSize:[36,36],iconAnchor:[18,18]});
+    L.marker([parseFloat(l.location_lat),parseFloat(l.location_lon)],{icon}).addTo(mapInst)
+      .bindPopup(`<div style="font-family:Mulish,sans-serif;min-width:160px;"><strong>${l.energy_type?.toUpperCase()}</strong><br>₹${l.base_price}/kWh base<br>${l.available_kwh} kWh available<br><span style="color:#E8631C">${l.location_city||'Your location'}</span></div>`);
+  });
+}
+
+// ─── CARBON ────────────────────────────────────────
+function renderCarbonSection() {
+  const score = parseFloat(user.carbon_score || myTxs.reduce((s,t)=>s+parseFloat(t.carbon_saved||0),0));
+  const pct = Math.min(100,(score/200)*100);
+  const rank = score>200?'PLATINUM':score>100?'GOLD':score>40?'SILVER':'GREEN';
+  const credits = (score*0.5).toFixed(1);
+  document.getElementById('c-val').textContent = score.toFixed(1);
+  document.getElementById('c-rank').textContent = rank+' RANK';
+  document.getElementById('c-cred').textContent = credits+' Green Credits';
+  const ring = document.getElementById('c-ring');
+  if (ring) ring.style.setProperty('--p', pct+'%');
+  document.getElementById('m-co2').textContent = score.toFixed(0);
+  const badges = [{name:'First Trade',icon:'⚡',req:0},{name:'Green Starter',icon:'🌱',req:10},{name:'Carbon Hero',icon:'🏆',req:50},{name:'Climate Champion',icon:'🌍',req:100},{name:'Platinum Guardian',icon:'💎',req:200}];
+  document.getElementById('badge-grid').innerHTML = badges.map(b=>`
+    <div style="padding:12px;background:${score>=b.req?'var(--A-d)':'var(--surf)'};border:1px solid ${score>=b.req?'var(--border-a)':'var(--border)'};border-radius:10px;text-align:center;">
+      <div style="font-size:26px;margin-bottom:6px;filter:${score>=b.req?'none':'grayscale(1) opacity(0.3)'}">${b.icon}</div>
+      <div style="font-family:'Mulish',sans-serif;font-size:12px;font-weight:600;color:${score>=b.req?'var(--text)':'var(--text-faint)'}">${b.name}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:3px;">${score>=b.req?'✓ UNLOCKED':'Need '+b.req+'kg CO₂'}</div>
+    </div>`).join('');
+}
+
+// ─── QUICK INSIGHTS ────────────────────────────────
+function loadQuickInsights() {
+  const c = weather.clouds||35; const w = weather.wind_speed||14;
+  const insights = [
+    c<25 ? '☀️ Clear sky — Solar surplus active. List solar now for high volume, or hold for better margins when clouds come.' : c>65 ? '⛅ Heavy cloud — Solar scarcity → premium pricing. If you have wind/biogas, list it now.' : '◉ Moderate conditions — All energy types at fair market rates.',
+    w>20 ? '💨 Strong wind — Wind energy at surplus pricing. Volume > margin strategy today.' : w<5 ? '🌬️ Calm winds — Wind scarcity = higher prices. Wind producers can command premium today.' : '💨 Moderate wind conditions — Standard wind pricing.',
+    '💡 Tip: Enable bulk pool listings to attract community buyers. 50+ kWh unlocks 8% discount for buyers.',
+    '📋 Ensure your profile location is accurate — buyers closest to you pay lower transmission fees.'
+  ];
+  document.getElementById('quick-insights').innerHTML = insights.map((ins,i)=>`
+    <div style="padding:10px 12px;background:var(--A-d);border:1px solid var(--border-a);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(232,99,28,0.8);line-height:1.6;">${ins}</div>
+  `).join('');
+}
+
+// ─── ARIA CHAT ─────────────────────────────────────
+async function sendChat() {
+  const msg = document.getElementById('chat-in').value.trim();
+  if (!msg) return;
+  document.getElementById('chat-in').value = '';
+  addMsg(msg, 'user');
+  const typingEl = addMsg('...', 'ai');
+  try {
+    const d = await api('/api/ai-advisor', {
+      method:'POST',
+      body: JSON.stringify({message:msg, lat:userLat, lon:userLon})
+    });
+    typingEl.textContent = d.reply || 'Sorry, I could not process that. Try again!';
+  } catch(e) {
+    typingEl.textContent = 'Connection error. Please check your backend.';
+  }
+}
+
+function addMsg(text, from) {
+  const el = document.createElement('div');
+  el.className = 'msg msg-'+(from==='ai'?'ai':'user');
+  el.textContent = text;
+  document.getElementById('chat-msgs').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
+}
+
+function askARIA(question) {
+  document.getElementById('chat-in').value = question;
+  goTo('aria', null);
+  sendChat();
+}
+
+// ─── POLICY ────────────────────────────────────────
+async function loadPolicy() {
+  try {
+    const p = await api('/api/policy');
+    document.getElementById('pp-floor').textContent = p.min_price_kwh;
+    document.getElementById('pp-cap').textContent = p.max_price_kwh;
+  } catch(e) {}
+}
+
+// ─── MODALS ────────────────────────────────────────
+function openListingModal() { openModal('listing-modal'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function doLogout() { openModal('logout-modal'); }
+function confirmLogout() {
+  fetch('/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+token}}).finally(()=>{
+    localStorage.removeItem('nx_user'); localStorage.removeItem('nx_token');
+    window.location.href = '/';
+  });
+}
+
+// ─── NAV ───────────────────────────────────────────
+const headings = {
+  overview:'Producer <span>Overview</span>',listings:'My Energy <span>Listings</span>',
+  map:'Grid <span>Map</span>',sales:'<span>Sales</span> History',
+  carbon:'Carbon <span>Credits</span>',aria:'ARIA <span>AI Advisor</span>'
+};
+function goTo(sec, el) {
+  document.querySelectorAll('.page-sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+sec)?.classList.add('on');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.getElementById('page-h').innerHTML = headings[sec]||sec;
+  if (sec==='listings') renderMyListings(myListings);
+  if (sec==='carbon') renderCarbonSection();
+  if (sec==='sales') { renderSalesSection(myTxs); updateEarningsSummary(myTxs); }
+  if (sec==='map') {
+    setTimeout(()=>{
+      if (!mapFull) {
+        mapFull = L.map('full-map',{center:[userLat,userLon],zoom:10,attributionControl:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapFull);
+        addProducerNodes(mapFull, myListings);
+        api(`/api/listings?lat=${userLat}&lon=${userLon}`).then(all => addProducerNodes(mapFull, all));
+      }
+    },100);
+  }
+}
+
+// ─── TOAST ─────────────────────────────────────────
+function toast(msg, ok=true) {
+  const el = document.getElementById('toast');
+  el.style.borderColor = ok ? 'var(--A)' : 'var(--rose)';
+  el.style.color = ok ? 'var(--A)' : 'var(--rose)';
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 4000);
+}
+
+// Map node pulse animation
+const style = document.createElement('style');
+style.textContent = `@keyframes ripple{0%{transform:scale(1);opacity:0.5}100%{transform:scale(2);opacity:0}} .leaflet-tile{filter:brightness(0.22) saturate(0.35) hue-rotate(200deg)!important;}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
