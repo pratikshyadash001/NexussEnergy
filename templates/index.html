@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEXUS — Decentralized Energy Exchange</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #060918;
+      --bg2:      #0B0D20;
+      --surface:  rgba(255,255,255,0.04);
+      --surface-h:rgba(255,255,255,0.07);
+      --border:   rgba(255,255,255,0.08);
+      --border-a: rgba(232,99,28,0.35);
+
+      --primary:  #E8631C;
+      --primary-g:rgba(232,99,28,0.18);
+      --primary-d:rgba(232,99,28,0.10);
+
+      --cyan:     #00CED4;
+      --cyan-g:   rgba(0,206,212,0.15);
+      --gold:     #F5A623;
+      --emerald:  #10B981;
+      --rose:     #F43F5E;
+      --violet:   #8B5CF6;
+
+      --text:     #EEF2FF;
+      --text-dim: rgba(238,242,255,0.50);
+      --text-faint:rgba(238,242,255,0.25);
+
+      --producer-c: #E8631C;
+      --consumer-c: #00CED4;
+      --investor-c: #8B5CF6;
+    }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Mulish', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.4;
+    }
+
+    /* MESH GRADIENT BG */
+    .mesh {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 800px 600px at 80% -10%, rgba(232,99,28,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 600px 500px at -10% 80%, rgba(0,206,212,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 400px at 50% 110%, rgba(139,92,246,0.06) 0%, transparent 60%);
+    }
+
+    /* GRID LINES */
+    .grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(232,99,28,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,99,28,0.03) 1px, transparent 1px);
+      background-size: 80px 80px;
+      animation: grid-pan 30s linear infinite;
+    }
+    @keyframes grid-pan { 0%{background-position:0 0} 100%{background-position:80px 80px} }
+
+    /* LAYOUT */
+    .shell {
+      position: relative; z-index: 10;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      min-height: 100vh;
+    }
+
+    /* ─── LEFT PANEL ─── */
+    .hero {
+      display: flex; flex-direction: column;
+      justify-content: center;
+      padding: 80px 90px;
+      border-right: 1px solid var(--border-a);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-watermark {
+      position: absolute;
+      bottom: -60px; right: -40px;
+      font-family: 'Syne', sans-serif;
+      font-size: 260px; font-weight: 800;
+      color: rgba(232,99,28,0.03);
+      letter-spacing: -10px;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* LOGO */
+    .logo { display: flex; align-items: center; gap: 14px; margin-bottom: 64px; }
+    .logo-icon {
+      width: 50px; height: 50px;
+      background: linear-gradient(135deg, var(--primary), #FF8C4C);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 40px rgba(232,99,28,0.3);
+      animation: logo-breathe 4s ease-in-out infinite;
+    }
+    @keyframes logo-breathe {
+      0%,100%{box-shadow: 0 0 30px rgba(232,99,28,0.3)}
+      50%{box-shadow: 0 0 60px rgba(232,99,28,0.5)}
+    }
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px; font-weight: 800;
+      letter-spacing: 4px;
+    }
+    .logo-sub {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--text-faint);
+      margin-top: 2px;
+    }
+
+    /* TAG LINE */
+    .status-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--primary-d);
+      border: 1px solid var(--border-a);
+      border-radius: 4px;
+      padding: 7px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--primary);
+      margin-bottom: 24px;
+    }
+    .pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    h1.hero-heading {
+      font-family: 'Syne', sans-serif;
+      font-size: 70px; font-weight: 800;
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: 22px;
+    }
+    h1.hero-heading .accent { color: var(--primary); }
+    h1.hero-heading .accent2 { color: var(--cyan); }
+
+    .hero-desc {
+      color: var(--text-dim);
+      font-size: 15px; line-height: 1.8;
+      max-width: 400px;
+      margin-bottom: 50px;
+      font-weight: 300;
+    }
+
+    /* FEATURE CARDS */
+    .features { display: flex; flex-direction: column; gap: 8px; max-width: 440px; }
+    .feat {
+      display: flex; align-items: center; gap: 14px;
+      padding: 13px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px; color: var(--text-dim);
+      transition: all 0.25s;
+    }
+    .feat:hover { border-color: var(--border-a); background: var(--surface-h); color: var(--text); }
+    .feat-icon { font-size: 20px; width: 32px; text-align:center; flex-shrink: 0; }
+    .feat strong { color: var(--primary); font-weight: 600; }
+
+    /* STATS */
+    .stats {
+      display: flex; gap: 36px;
+      margin-top: 44px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px; font-weight: 700;
+      color: var(--primary);
+    }
+    .stat-lbl {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      color: var(--text-faint);
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ─── RIGHT AUTH PANEL ─── */
+    .auth-panel {
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px 50px;
+    }
+    .auth-box { width: 100%; max-width: 400px; }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-radius: 10px; padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab {
+      flex: 1; padding: 11px;
+      text-align: center;
+      font-family: 'Mulish', sans-serif; font-size: 14px; font-weight: 600;
+      color: var(--text-faint);
+      border-radius: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab.on { background: var(--primary-d); color: var(--primary); border: 1px solid var(--border-a); }
+
+    /* ROLE SELECTOR */
+    .role-heading {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--text-faint); margin-bottom: 10px;
+    }
+    .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .role-card {
+      padding: 14px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .role-card:hover { background: var(--surface); }
+    .role-card.sel { border-color: var(--rc, var(--primary)); background: rgba(232,99,28,0.06); }
+    .role-card.sel[data-role="consumer"] { background: rgba(0,206,212,0.06); }
+    .role-card.sel[data-role="investor"] { background: rgba(139,92,246,0.06); }
+    .role-icon { font-size: 20px; }
+    .role-name { font-family: 'Mulish', sans-serif; font-weight: 600; font-size: 13px; }
+    .role-desc { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: 1px; color: var(--text-faint); }
+
+    /* FORM */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      color: var(--text-faint); text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px;
+      font-family: 'Mulish', sans-serif; font-size: 14px;
+      color: var(--text); outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--primary); }
+    .field input::placeholder { color: var(--text-faint); }
+
+    /* LOCATION AUTO-DETECT */
+    .location-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--primary-d);
+      border: 1px solid var(--border-a);
+      border-radius: 8px; margin-bottom: 14px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      color: var(--primary);
+    }
+    .loc-detect-btn {
+      margin-left: auto;
+      padding: 4px 10px;
+      background: var(--primary);
+      color: var(--bg);
+      border: none; border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* BUTTONS */
+    .btn-primary {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), #FF8C4C);
+      color: white;
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      letter-spacing: 1px; border: none; border-radius: 10px;
+      cursor: pointer; transition: all 0.2s;
+      margin-top: 6px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(232,99,28,0.35); }
+
+    /* DEMO */
+    .demo-block {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .demo-lbl {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      letter-spacing: 2px; color: var(--text-faint);
+      text-align: center; margin-bottom: 10px;
+    }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .demo-btn {
+      padding: 9px 4px; border-radius: 8px;
+      font-family: 'Mulish', sans-serif; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; border: 1px solid;
+      background: transparent;
+    }
+    .db-prod { border-color: rgba(232,99,28,0.4); color: var(--primary); }
+    .db-prod:hover { background: var(--primary-d); }
+    .db-cons { border-color: rgba(0,206,212,0.4); color: var(--cyan); }
+    .db-cons:hover { background: var(--cyan-g); }
+    .db-inv  { border-color: rgba(139,92,246,0.4); color: var(--violet); }
+    .db-inv:hover  { background: rgba(139,92,246,0.1); }
+
+    /* ERROR */
+    .err-msg {
+      padding: 10px 14px;
+      background: rgba(244,63,94,0.1);
+      border: 1px solid rgba(244,63,94,0.3);
+      border-radius: 8px; color: #F87171;
+      font-size: 13px; margin-bottom: 12px;
+      display: none;
+    }
+
+    /* SWITCH LINK */
+    .auth-switch {
+      text-align: center; margin-top: 18px;
+      font-size: 13px; color: var(--text-faint);
+    }
+    .auth-switch a { color: var(--primary); cursor: pointer; text-decoration: none; font-weight: 600; }
+
+    /* TICKER */
+    .ticker {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(6,9,24,0.95);
+      border-top: 1px solid var(--border-a);
+      padding: 8px 0; z-index: 100;
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+    }
+    .ticker-inner {
+      display: flex; gap: 80px; white-space: nowrap;
+      animation: scroll-left 40s linear infinite;
+    }
+    @keyframes scroll-left { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    .tick-item {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      color: rgba(232,99,28,0.55);
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .tick-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--primary); }
+
+    .hidden { display: none !important; }
+
+    /* SCROLL SPACE FOR TICKER */
+    .shell { padding-bottom: 48px; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      .hero { padding: 60px 40px; border-right: none; border-bottom: 1px solid var(--border-a); }
+      .auth-panel { padding: 50px 30px; }
+      h1.hero-heading { font-size: 52px; }
+    }
+    @media (max-width: 560px) {
+      .hero { padding: 40px 20px; }
+      h1.hero-heading { font-size: 42px; }
+      .stats { flex-wrap: wrap; gap: 20px; }
+      .auth-panel { padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="mesh"></div>
+<div class="grid"></div>
+
+<div class="shell">
+
+  <!-- ─── LEFT HERO ─── -->
+  <section class="hero">
+    <div class="hero-watermark">NEXUS</div>
+
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">NEXUS</div>
+        <span class="logo-sub">DECENTRALIZED ENERGY EXCHANGE</span>
+      </div>
+    </div>
+
+    <div class="status-tag">
+      <span class="pulse-dot"></span>
+      P2P RENEWABLE ENERGY NETWORK · INDIA
+    </div>
+
+    <h1 class="hero-heading">
+      Trade Clean<br>
+      Energy <span class="accent">Peer-to</span><br>
+      <span class="accent2">Peer</span>
+    </h1>
+
+    <p class="hero-desc">
+      The intelligent P2P marketplace connecting solar, wind & biogas producers directly with consumers and investors — with weather-adaptive pricing, escrow settlement, and zero intermediaries.
+    </p>
+
+    <div class="features">
+      <div class="feat"><span class="feat-icon">🌤️</span><span><strong>Climate-Adaptive Pricing</strong> — Prices auto-adjust based on real-time cloud cover, wind speed & temperature</span></div>
+      <div class="feat"><span class="feat-icon">🔗</span><span><strong>Escrow + Hash Ledger</strong> — Every trade cryptographically secured, funds released on delivery</span></div>
+      <div class="feat"><span class="feat-icon">🤖</span><span><strong>ARIA AI Advisor</strong> — Your personal AI for optimal buy/sell timing per role</span></div>
+      <div class="feat"><span class="feat-icon">🏛️</span><span><strong>Ethical Framework</strong> — Price floors/ceilings + subsidies ensure fair markets without govt control</span></div>
+    </div>
+
+    <div class="stats">
+      <div><div class="stat-num" id="s-prod">—</div><div class="stat-lbl">Active Producers</div></div>
+      <div><div class="stat-num" id="s-kwh">—</div><div class="stat-lbl">kWh Traded</div></div>
+      <div><div class="stat-num" id="s-co2">—</div><div class="stat-lbl">CO₂ Saved</div></div>
+      <div><div class="stat-num" id="s-tx">—</div><div class="stat-lbl">Transactions</div></div>
+    </div>
+  </section>
+
+  <!-- ─── RIGHT AUTH ─── -->
+  <section class="auth-panel">
+    <div class="auth-box">
+      <div class="tabs">
+        <div class="tab on" onclick="showTab('login')">Sign In</div>
+        <div class="tab" onclick="showTab('register')">Create Account</div>
+      </div>
+
+      <div id="err" class="err-msg"></div>
+
+      <!-- LOGIN FORM -->
+      <div id="form-login">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="l-email" placeholder="you@example.com"/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="l-pw" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')doLogin()"/>
+        </div>
+        <button class="btn-primary" onclick="doLogin()">SIGN IN →</button>
+        <div class="auth-switch">No account? <a onclick="showTab('register')">Register here</a></div>
+
+        <div class="demo-block">
+          <div class="demo-lbl">INSTANT DEMO — NO SIGNUP REQUIRED</div>
+          <div class="demo-grid">
+            <button class="demo-btn db-prod" onclick="demoAccess('producer')">⚡ Producer</button>
+            <button class="demo-btn db-cons" onclick="demoAccess('consumer')">🏠 Consumer</button>
+            <button class="demo-btn db-inv"  onclick="demoAccess('investor')">📈 Investor</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="form-register" class="hidden">
+        <div class="role-heading">I AM A...</div>
+        <div class="roles">
+          <div class="role-card sel" data-role="producer" onclick="selRole(this)">
+            <span class="role-icon">☀️</span>
+            <span class="role-name">Producer</span>
+            <span class="role-desc">SOLAR · WIND · BIOGAS</span>
+          </div>
+          <div class="role-card" data-role="consumer" onclick="selRole(this)">
+            <span class="role-icon">🏠</span>
+            <span class="role-name">Consumer</span>
+            <span class="role-desc">BUY CLEAN ENERGY</span>
+          </div>
+          <div class="role-card" data-role="investor" onclick="selRole(this)">
+            <span class="role-icon">📈</span>
+            <span class="role-name">Investor</span>
+            <span class="role-desc">FUND PRODUCERS</span>
+          </div>
+          <div class="role-card" data-role="community" onclick="selRole(this)">
+            <span class="role-icon">🌱</span>
+            <span class="role-name">Community</span>
+            <span class="role-desc">GROUP BUYING</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="r-name" placeholder="Your full name"/>
+        </div>
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="r-email" placeholder="you@example.com"/>
+        </div>
+        <div class="field">
+          <label>Password (min 8 chars)</label>
+          <input type="password" id="r-pw" placeholder="Create a strong password"/>
+        </div>
+
+        <!-- AUTO LOCATION -->
+        <div class="location-row" id="loc-row">
+          <span>📍</span>
+          <span id="loc-text">Location required for local energy pricing</span>
+          <button class="loc-detect-btn" onclick="detectLocation()">DETECT</button>
+        </div>
+
+        <button class="btn-primary" onclick="doRegister()">CREATE ACCOUNT →</button>
+        <div class="auth-switch">Have an account? <a onclick="showTab('login')">Sign in</a></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- LIVE TICKER -->
+<div class="ticker">
+  <div class="ticker-inner" id="ticker"></div>
+</div>
+
+<script>
+// ─── STATE ─────────────────────────────────────────
+let selectedRole = 'producer';
+let detectedLat = 22.7196;
+let detectedLon = 75.8577;
+let detectedCity = 'Indore';
+
+// ─── LOAD STATS ────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('s-prod').textContent = s.active_listings || '—';
+    document.getElementById('s-kwh').textContent = s.total_kwh ? (s.total_kwh/1000).toFixed(1)+'K' : '—';
+    document.getElementById('s-co2').textContent = s.total_co2_saved ? s.total_co2_saved.toFixed(0)+'kg' : '—';
+    document.getElementById('s-tx').textContent = s.total_transactions || '—';
+  } catch(e) {
+    document.getElementById('s-prod').textContent = '24';
+    document.getElementById('s-kwh').textContent = '1.8K';
+    document.getElementById('s-co2').textContent = '892kg';
+    document.getElementById('s-tx').textContent = '147';
+  }
+}
+loadStats();
+
+// ─── LOCATION DETECT ───────────────────────────────
+function detectLocation() {
+  const btn = document.querySelector('.loc-detect-btn');
+  btn.textContent = '...';
+  if (!navigator.geolocation) {
+    document.getElementById('loc-text').textContent = '📍 Using default: Indore, MP';
+    btn.textContent = '✓';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      detectedLat = pos.coords.latitude;
+      detectedLon = pos.coords.longitude;
+      // Reverse geocode city name
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${detectedLat}&lon=${detectedLon}&format=json`);
+        const d = await r.json();
+        detectedCity = d.address?.city || d.address?.town || d.address?.state_district || 'Your City';
+      } catch(e) { detectedCity = 'Detected Location'; }
+      document.getElementById('loc-text').textContent = `📍 ${detectedCity} (${detectedLat.toFixed(3)}, ${detectedLon.toFixed(3)})`;
+      btn.textContent = '✓';
+      btn.style.background = '#10B981';
+    },
+    err => {
+      document.getElementById('loc-text').textContent = '📍 Using default: Indore, MP';
+      btn.textContent = '✓';
+    }
+  );
+}
+
+// Auto-detect location on page load for register
+function tryAutoDetect() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      detectedLat = pos.coords.latitude;
+      detectedLon = pos.coords.longitude;
+    }, () => {});
+  }
+}
+tryAutoDetect();
+
+// ─── TAB SWITCHING ─────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('on', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+  clearErr();
+}
+
+// ─── ROLE SELECT ───────────────────────────────────
+function selRole(el) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedRole = el.dataset.role;
+  if (selectedRole === 'community') selectedRole = 'consumer';
+}
+
+// ─── ERROR ─────────────────────────────────────────
+function showErr(msg) { const e = document.getElementById('err'); e.textContent = msg; e.style.display = 'block'; }
+function clearErr() { document.getElementById('err').style.display = 'none'; }
+
+// ─── LOGIN ─────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pw = document.getElementById('l-pw').value;
+  if (!email || !pw) { showErr('Please fill in all fields.'); return; }
+  clearErr();
+  const btn = document.querySelector('#form-login .btn-primary');
+  btn.textContent = 'SIGNING IN...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: pw})
+    });
+    const d = await r.json();
+    if (d.success) {
+      saveSession(d.token, d.user);
+      redirectByRole(d.role || d.user.role);
+    } else {
+      showErr(d.error || 'Login failed. Check credentials.');
+    }
+  } catch(e) {
+    showErr('Connection error. Please try again.');
+  } finally {
+    btn.textContent = 'SIGN IN →'; btn.disabled = false;
+  }
+}
+
+// ─── REGISTER ──────────────────────────────────────
+async function doRegister() {
+  const name = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const pw = document.getElementById('r-pw').value;
+  if (!name || !email || !pw) { showErr('All fields are required.'); return; }
+  if (pw.length < 8) { showErr('Password must be at least 8 characters.'); return; }
+  clearErr();
+  const btn = document.querySelector('#form-register .btn-primary');
+  btn.textContent = 'CREATING...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name, email, password: pw, role: selectedRole,
+        lat: detectedLat, lon: detectedLon, city: detectedCity
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      saveSession(d.token, d.user);
+      redirectByRole(d.role || d.user.role);
+    } else {
+      showErr(d.error || 'Registration failed.');
+    }
+  } catch(e) {
+    showErr('Connection error. Please try again.');
+  } finally {
+    btn.textContent = 'CREATE ACCOUNT →'; btn.disabled = false;
+  }
+}
+
+// ─── DEMO ──────────────────────────────────────────
+function demoAccess(role) {
+  const names = {producer:'SolarPro_Demo', consumer:'HomeUser_Demo', investor:'GreenFund_Demo'};
+  const user = {
+    id: 'demo_' + role,
+    name: names[role], email: 'demo@nexus.io', role,
+    location_lat: detectedLat, location_lon: detectedLon,
+    location_city: detectedCity,
+    carbon_score: role === 'consumer' ? 14.5 : 0,
+    demo: true
+  };
+  localStorage.setItem('nx_user', JSON.stringify(user));
+  localStorage.setItem('nx_token', 'demo_token_' + role);
+  redirectByRole(role);
+}
+
+function saveSession(token, user) {
+  localStorage.setItem('nx_token', token);
+  localStorage.setItem('nx_user', JSON.stringify(user));
+}
+
+function redirectByRole(role) {
+  const routes = {producer: '/producer', consumer: '/consumer', investor: '/investor', admin: '/admin'};
+  window.location.href = routes[role] || '/consumer';
+}
+
+// ─── TICKER ────────────────────────────────────────
+const ticks = [
+  '⚡ SolarPro_Bhopal → Consumer_Indore | 24 kWh | ₹2.85/unit | Escrow Released | CO₂: 19.7kg saved',
+  '💨 WindMill_Rajasthan → Industry_07 | 90 kWh | ₹2.2/unit | Bulk 8% Applied | Hash: 0xF4C2A891',
+  '🌿 Biogas_Nashik → Community_Hub | 30 kWh | ₹3.22/unit | Pool: 4 members | ₹96.6 total',
+  '☀️ Solar_Pune_Rooftop → HomeUser_55 | 12 kWh | ₹2.9/unit | Distance: 1.2km | ₹34.8',
+  '📈 Investor_GreenFund funded SolarFarm_MP | 200 kWh capacity | ₹8,500 invested',
+  '🤝 Community Pool #NX07 filled — 5 members | 67 kWh | ₹2.96/unit avg | 8% discount unlocked',
+];
+const doubled = [...ticks, ...ticks];
+document.getElementById('ticker').innerHTML = doubled.map(t =>
+  `<span class="tick-item"><span class="tick-dot"></span>${t}</span>`
+).join('');
+</script>
+</body>
+</html>
