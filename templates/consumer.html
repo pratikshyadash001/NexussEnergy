@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEXUS — Consumer Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg:#060918; --bg2:#0B0D20;
+      --surf:rgba(255,255,255,0.04); --surf-h:rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.08); --border-a:rgba(0,206,212,0.30);
+      --A:#00CED4; --A-g:rgba(0,206,212,0.18); --A-d:rgba(0,206,212,0.10);
+      --orange:#E8631C; --gold:#F5A623; --green:#10B981; --rose:#F43F5E; --violet:#8B5CF6;
+      --text:#EEF2FF; --text-dim:rgba(238,242,255,0.5); --text-faint:rgba(238,242,255,0.25);
+      --sidebar-w:240px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Mulish',sans-serif;overflow:hidden;}
+    ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-thumb{background:var(--border-a);border-radius:2px;}
+    body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 700px 500px at 100% -10%,rgba(0,206,212,0.08) 0%,transparent 60%),
+                 radial-gradient(ellipse 400px 400px at 0% 100%,rgba(139,92,246,0.06) 0%,transparent 60%);}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
+      background:rgba(6,9,24,0.97);border-right:1px solid var(--border-a);
+      display:flex;flex-direction:column;padding:24px 0;z-index:200;backdrop-filter:blur(20px);}
+    .s-brand{display:flex;align-items:center;gap:10px;padding:0 20px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+    .s-brand-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--A),#00A8B0);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .s-brand-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;}
+    .s-brand-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--A);background:var(--A-d);padding:2px 8px;border-radius:3px;margin-top:3px;}
+    .s-section{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);padding:0 20px 8px;text-transform:uppercase;}
+    .nav{display:flex;align-items:center;gap:11px;padding:10px 20px;font-family:'Mulish',sans-serif;font-size:13px;font-weight:500;color:var(--text-dim);cursor:pointer;border-left:2px solid transparent;transition:all 0.15s;}
+    .nav:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+    .nav.on{color:var(--A);border-left-color:var(--A);background:var(--A-d);}
+    .nav .ni{font-size:15px;width:20px;text-align:center;}
+    .s-spacer{flex:1;}
+    .s-weather{margin:0 12px 12px;padding:14px;background:var(--surf);border:1px solid var(--border-a);border-radius:12px;}
+    .sw-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:8px;}
+    .sw-temp{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--A);line-height:1;}
+    .sw-cond{font-family:'Mulish',sans-serif;font-size:11px;color:var(--text-dim);margin-top:4px;}
+    .sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;}
+    .sw-item{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .sw-item span{color:var(--text-dim);}
+    .s-user{margin:0 12px 10px;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;gap:10px;}
+    .s-avatar{width:38px;height:38px;background:var(--A-d);border:2px solid var(--border-a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .s-uname{font-family:'Mulish',sans-serif;font-weight:600;font-size:12px;}
+    .s-urole{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--A);background:var(--A-d);padding:2px 7px;border-radius:3px;margin-top:3px;display:inline-block;}
+    .s-logout{margin:0 12px 16px;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.2);border-radius:8px;color:var(--rose);font-family:'Mulish',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+    .s-logout:hover{background:rgba(244,63,94,0.15);transform:translateY(-1px);}
+    .main{margin-left:var(--sidebar-w);height:100vh;overflow-y:auto;padding:28px 28px 40px;position:relative;z-index:10;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+    .page-h{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
+    .page-h span{color:var(--A);}
+    .topbar-r{display:flex;align-items:center;gap:10px;}
+    .w-pill{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--border-a);border-radius:8px;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--A);}
+    .btn-primary{padding:9px 18px;background:linear-gradient(135deg,var(--A),#00A8B0);color:var(--bg);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,206,212,0.3);}
+    .policy-bar{padding:10px 16px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.2);border-radius:8px;display:flex;align-items:center;gap:12px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(245,166,35,0.8);}
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+    .metric{padding:18px 20px;background:var(--surf);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden;transition:all 0.2s;}
+    .metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--A));}
+    .metric:hover{border-color:var(--border-a);transform:translateY(-2px);}
+    .m-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px;}
+    .m-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--mc,var(--A));}
+    .m-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:5px;}
+    .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-bottom:18px;}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+    .card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color 0.2s;}
+    .card:hover{border-color:var(--border-a);}
+    .c-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .c-title a{color:var(--A);text-decoration:none;font-size:9px;cursor:pointer;}
+    .source-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+    .sf-btn{padding:5px 14px;background:var(--surf);border:1px solid var(--border);border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+    .sf-btn.on{background:var(--A-d);border-color:var(--border-a);color:var(--A);}
+    .listing-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .listing-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all 0.2s;cursor:pointer;}
+    .listing-card:hover{border-color:var(--border-a);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,206,212,0.08);}
+    .lc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+    .lc-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+    .lc-type{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;padding:3px 8px;border-radius:4px;}
+    .lc-type.solar{background:rgba(245,166,35,0.15);color:var(--gold);}
+    .lc-type.wind{background:rgba(0,206,212,0.15);color:var(--A);}
+    .lc-type.biogas{background:rgba(16,185,129,0.15);color:var(--green);}
+    .lc-price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;}
+    .lc-price{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--A);}
+    .lc-unit{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .lc-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:12px;}
+    .lc-meta-item{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .lc-meta-item span{color:var(--text-dim);}
+    .lc-dir{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;margin-bottom:8px;}
+    .lc-dir.up{background:rgba(244,63,94,0.1);color:var(--rose);}
+    .lc-dir.down{background:rgba(16,185,129,0.1);color:var(--green);}
+    .lc-dir.neutral{background:rgba(245,166,35,0.1);color:var(--gold);}
+    .lc-buy-btn{width:100%;padding:8px;background:linear-gradient(135deg,rgba(0,206,212,0.15),rgba(0,206,212,0.08));border:1px solid var(--border-a);color:var(--A);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+    .lc-buy-btn:hover{background:linear-gradient(135deg,rgba(0,206,212,0.25),rgba(0,206,212,0.15));transform:translateY(-1px);}
+    .advisor-box{padding:18px;background:linear-gradient(135deg,rgba(0,206,212,0.06),rgba(139,92,246,0.04));border:1px solid var(--border-a);border-radius:12px;margin-bottom:16px;}
+    .adv-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--A);margin-bottom:8px;}
+    .adv-rec{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px;}
+    .adv-reason{font-family:'Mulish',sans-serif;font-size:12px;color:var(--text-dim);line-height:1.5;}
+    .forecast-bar{display:flex;gap:6px;align-items:flex-end;height:60px;margin-top:8px;}
+    .fb-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .fb-bar{width:100%;border-radius:3px 3px 0 0;background:var(--A-g);border:1px solid var(--border-a);transition:height 0.3s;}
+    .fb-bar.best{background:linear-gradient(to top,rgba(0,206,212,0.4),rgba(0,206,212,0.2));border-color:var(--A);}
+    .fb-time{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--text-faint);}
+    .fb-price{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--A);}
+    .pool-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;transition:border-color 0.2s;}
+    .pool-card:hover{border-color:var(--border-a);}
+    .pool-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .pool-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+    .pool-disc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(16,185,129,0.1);padding:3px 8px;border-radius:4px;}
+    .pool-progress-bg{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+    .pool-progress-fill{height:100%;background:linear-gradient(to right,var(--A),#00A8B0);border-radius:3px;transition:width 0.5s;}
+    .pool-meta{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .pool-join-btn{margin-top:10px;width:100%;padding:7px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+    .pool-join-btn:hover{background:rgba(16,185,129,0.15);}
+    .pool-join-btn:disabled{opacity:0.4;cursor:default;}
+    .carbon-ring-wrap{display:flex;align-items:center;gap:24px;margin-bottom:20px;}
+    .carbon-ring{position:relative;width:120px;height:120px;flex-shrink:0;}
+    .carbon-ring svg{transform:rotate(-90deg);}
+    .carbon-ring-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .cr-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green);}
+    .cr-lbl{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:1px;color:var(--text-faint);}
+    .carbon-info{flex:1;}
+    .ci-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;}
+    .ci-rank{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;padding:3px 10px;border-radius:4px;background:rgba(16,185,129,0.1);color:var(--green);margin-bottom:8px;}
+    .ci-desc{font-family:'Mulish',sans-serif;font-size:12px;color:var(--text-dim);line-height:1.5;}
+    .badges-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    .badge{display:flex;align-items:center;gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);transition:all 0.2s;}
+    .badge.earned{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.06);color:var(--green);}
+    .badge-icon{font-size:16px;}
+    .tx-list{display:flex;flex-direction:column;gap:8px;}
+    .tx-row{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;align-items:center;gap:14px;transition:border-color 0.15s;}
+    .tx-row:hover{border-color:var(--border-a);}
+    .tx-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .tx-icon.solar{background:rgba(245,166,35,0.1);}
+    .tx-icon.wind{background:rgba(0,206,212,0.1);}
+    .tx-icon.biogas{background:rgba(16,185,129,0.1);}
+    .tx-info{flex:1;}
+    .tx-producer{font-family:'Mulish',sans-serif;font-size:13px;font-weight:600;}
+    .tx-detail{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:2px;}
+    .tx-right{text-align:right;}
+    .tx-amount{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--rose);}
+    .tx-hash{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:2px;}
+    #consumer-map{border-radius:12px;overflow:hidden;height:340px;border:1px solid var(--border);}
+    .page-sec{display:none;}
+    .page-sec.on{display:block;}
+    .modal-overlay{position:fixed;inset:0;background:rgba(6,9,24,0.85);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--bg2);border:1px solid var(--border-a);border-radius:16px;padding:28px;width:420px;max-width:95vw;}
+    .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;}
+    .modal-sub{font-family:'Mulish',sans-serif;font-size:13px;color:var(--text-dim);margin-bottom:20px;}
+    .form-row{margin-bottom:14px;}
+    .form-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--text-faint);margin-bottom:5px;}
+    .form-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Mulish',sans-serif;font-size:13px;outline:none;transition:border-color 0.2s;}
+    .form-input:focus{border-color:var(--border-a);}
+    .modal-price-box{background:var(--bg);border:1px solid var(--border-a);border-radius:10px;padding:14px;margin-bottom:16px;}
+    .mpb-row{display:flex;justify-content:space-between;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);}
+    .mpb-row span{color:var(--text-dim);}
+    .mpb-total{display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;padding-top:8px;border-top:1px solid var(--border);}
+    .mpb-total span{color:var(--A);}
+    .modal-btns{display:flex;gap:10px;margin-top:4px;}
+    .btn-cancel{flex:1;padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:13px;cursor:pointer;}
+    .btn-confirm{flex:1.5;padding:10px;background:linear-gradient(135deg,var(--A),#00A8B0);border:none;border-radius:8px;color:var(--bg);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+    .btn-confirm:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,206,212,0.3);}
+    .logout-modal{background:var(--bg2);border:1px solid rgba(244,63,94,0.3);border-radius:16px;padding:28px;width:360px;}
+    .logout-modal .modal-title{color:var(--rose);}
+    .btn-logout-confirm{flex:1.5;padding:10px;background:linear-gradient(135deg,var(--rose),#d63851);border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border-a);border-radius:10px;padding:12px 18px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--A);z-index:2000;transform:translateY(100px);opacity:0;transition:all 0.3s;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .aria-input-row{display:flex;gap:8px;margin-top:12px;}
+    .aria-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Mulish',sans-serif;font-size:13px;outline:none;}
+    .aria-input:focus{border-color:var(--border-a);}
+    .aria-send{padding:9px 16px;background:linear-gradient(135deg,var(--A),#00A8B0);border:none;border-radius:8px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+    .aria-messages{display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto;}
+    .aria-msg{padding:10px 14px;border-radius:8px;font-family:'Mulish',sans-serif;font-size:13px;line-height:1.5;}
+    .aria-msg.user{background:var(--A-d);border:1px solid var(--border-a);align-self:flex-end;max-width:80%;}
+    .aria-msg.ai{background:var(--surf);border:1px solid var(--border);align-self:flex-start;max-width:90%;}
+    .aria-msg.thinking{color:var(--text-faint);font-style:italic;}
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="s-brand">
+    <div class="s-brand-icon">⚡</div>
+    <div>
+      <div class="s-brand-name">NEXUS</div>
+      <div class="s-brand-role">CONSUMER</div>
+    </div>
+  </div>
+  <div class="s-section">Navigation</div>
+  <div class="nav on" onclick="goTo('overview',this)"><span class="ni">📊</span> Overview</div>
+  <div class="nav" onclick="goTo('market',this)"><span class="ni">🛒</span> Marketplace</div>
+  <div class="nav" onclick="goTo('pools',this)"><span class="ni">🤝</span> Energy Pools</div>
+  <div class="nav" onclick="goTo('map',this)"><span class="ni">🗺️</span> Grid Map</div>
+  <div class="nav" onclick="goTo('history',this)"><span class="ni">📋</span> Purchase History</div>
+  <div class="nav" onclick="goTo('carbon',this)"><span class="ni">🌿</span> Carbon Impact</div>
+  <div class="nav" onclick="goTo('aria',this)"><span class="ni">🤖</span> ARIA Advisor</div>
+  <div class="s-spacer"></div>
+  <div class="s-weather" id="sw">
+    <div class="sw-label">LIVE WEATHER</div>
+    <div class="sw-temp" id="sw-temp">--°</div>
+    <div class="sw-cond" id="sw-cond">Loading…</div>
+    <div class="sw-grid">
+      <div class="sw-item">☁️ <span id="sw-cloud">--</span>%</div>
+      <div class="sw-item">💨 <span id="sw-wind">--</span> km/h</div>
+      <div class="sw-item">💧 <span id="sw-hum">--</span>%</div>
+      <div class="sw-item">📍 <span id="sw-city">…</span></div>
+    </div>
+  </div>
+  <div class="s-user">
+    <div class="s-avatar" id="s-avatar">👤</div>
+    <div>
+      <div class="s-uname" id="s-uname">Consumer</div>
+      <div class="s-urole">CONSUMER</div>
+    </div>
+  </div>
+  <div class="s-logout" onclick="showLogoutModal()">🚪 Sign Out</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-h" id="page-h">Consumer <span>Overview</span></div>
+    <div class="topbar-r">
+      <div class="w-pill" id="w-pill-top">⛅ --°C — --% cloud</div>
+      <button class="btn-primary" onclick="goTo('market',document.querySelectorAll('.nav')[1])">🛒 Buy Energy</button>
+    </div>
+  </div>
+
+  <div class="policy-bar">
+    ⚖️ &nbsp; <strong>CONSUMER PROTECTION ACTIVE</strong> &nbsp;|&nbsp;
+    Price Ceiling: <strong>₹12.00/kWh</strong> &nbsp;·&nbsp;
+    Govt Subsidy: Solar −₹0.50 · Wind −₹0.30 · Biogas −₹0.20 &nbsp;·&nbsp;
+    Bulk Discount (≥50 kWh): <strong>−8%</strong>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section class="page-sec on" id="s-overview">
+    <div class="metrics">
+      <div class="metric">
+        <div class="m-lbl">Total Spent</div>
+        <div class="m-val" id="m-spent">₹0</div>
+        <div class="m-sub" id="m-spent-sub">all time</div>
+      </div>
+      <div class="metric" style="--mc:var(--green)">
+        <div class="m-lbl">CO₂ Saved</div>
+        <div class="m-val" id="m-co2">0 kg</div>
+        <div class="m-sub">vs grid average</div>
+      </div>
+      <div class="metric" style="--mc:var(--gold)">
+        <div class="m-lbl">Energy Bought</div>
+        <div class="m-val" id="m-kwh">0 kWh</div>
+        <div class="m-sub" id="m-kwh-sub">total units</div>
+      </div>
+      <div class="metric" style="--mc:var(--violet)">
+        <div class="m-lbl">Total Trades</div>
+        <div class="m-val" id="m-trades">0</div>
+        <div class="m-sub">P2P transactions</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="c-title">SMART SOURCE ADVISOR <a onclick="refreshAdvisor()">↻ REFRESH</a></div>
+        <div class="advisor-box">
+          <div class="adv-label">🤖 ARIA RECOMMENDATION</div>
+          <div class="adv-rec" id="adv-rec">Analysing weather conditions…</div>
+          <div class="adv-reason" id="adv-reason">Checking live cloud cover, wind speed, and current pricing…</div>
+        </div>
+        <div class="c-title" style="margin-top:16px">PRICE FORECAST — NEXT 6H</div>
+        <div class="forecast-bar" id="forecast-bar"></div>
+      </div>
+      <div class="card">
+        <div class="c-title">RECENT PURCHASES</div>
+        <div class="tx-list" id="overview-tx"></div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card" style="--border-a:rgba(245,166,35,0.3)">
+        <div class="c-title">☀️ SOLAR RATE</div>
+        <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:700;color:var(--gold)" id="rate-solar">₹--</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · weather-adjusted</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:4px" id="rate-solar-reason"></div>
+      </div>
+      <div class="card">
+        <div class="c-title">💨 WIND RATE</div>
+        <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:700;color:var(--A)" id="rate-wind">₹--</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · weather-adjusted</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:4px" id="rate-wind-reason"></div>
+      </div>
+      <div class="card" style="--border-a:rgba(16,185,129,0.3)">
+        <div class="c-title">🌿 BIOGAS RATE</div>
+        <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:700;color:var(--green)" id="rate-biogas">₹--</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · stable baseload</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARKETPLACE -->
+  <section class="page-sec" id="s-market">
+    <div class="source-filter">
+      <div class="sf-btn on" onclick="filterListings('all',this)">All Sources</div>
+      <div class="sf-btn" onclick="filterListings('solar',this)">☀️ Solar</div>
+      <div class="sf-btn" onclick="filterListings('wind',this)">💨 Wind</div>
+      <div class="sf-btn" onclick="filterListings('biogas',this)">🌿 Biogas</div>
+    </div>
+    <div id="listings-container" class="listing-grid"></div>
+  </section>
+
+  <!-- POOLS -->
+  <section class="page-sec" id="s-pools">
+    <div class="grid2">
+      <div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="c-title">ACTIVE POOLS <a onclick="loadPools()">↻ REFRESH</a></div>
+          <div id="pools-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="c-title">HOW POOLS WORK</div>
+        <div style="font-family:'Mulish',sans-serif;font-size:13px;color:var(--text-dim);line-height:1.8;">
+          <div style="margin-bottom:10px">🤝 <strong>Community energy pools</strong> let multiple consumers join together to reach bulk purchase thresholds.</div>
+          <div style="margin-bottom:10px">⚡ When a pool hits <strong>50 kWh</strong>, all members receive an <strong>8% discount</strong> automatically.</div>
+          <div style="margin-bottom:10px">🔒 Payments are held in <strong>escrow</strong> until the pool fills and energy is delivered.</div>
+          <div>📊 Each pool transaction is recorded on the <strong>P2P ledger</strong> with a SHA-256 hash.</div>
+        </div>
+        <button class="btn-primary" style="margin-top:16px;width:100%" onclick="showCreatePool()">+ Create New Pool</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="page-sec" id="s-map">
+    <div class="card" style="padding:16px">
+      <div class="c-title">PRODUCER GRID MAP — CLICK NODE TO BUY</div>
+      <div id="consumer-map"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="page-sec" id="s-history">
+    <div class="card">
+      <div class="c-title">PURCHASE HISTORY <a onclick="loadMyTxs()">↻ REFRESH</a></div>
+      <div class="tx-list" id="history-tx"></div>
+    </div>
+  </section>
+
+  <!-- CARBON -->
+  <section class="page-sec" id="s-carbon">
+    <div class="card" style="margin-bottom:18px">
+      <div class="c-title">YOUR CARBON IMPACT</div>
+      <div class="metrics" style="margin-bottom:20px">
+        <div class="metric" style="--mc:var(--green)">
+          <div class="m-lbl">CO₂ Saved</div>
+          <div class="m-val" id="carbon-co2">0 kg</div>
+          <div class="m-sub">lifetime savings</div>
+        </div>
+        <div class="metric" style="--mc:var(--gold)">
+          <div class="m-lbl">Green Credits</div>
+          <div class="m-val" id="carbon-credits">0</div>
+          <div class="m-sub">earned from purchases</div>
+        </div>
+        <div class="metric" style="--mc:var(--cyan)">
+          <div class="m-lbl">Rank</div>
+          <div class="m-val" id="carbon-rank">GREEN</div>
+          <div class="m-sub">your tier</div>
+        </div>
+        <div class="metric" style="--mc:var(--violet)">
+          <div class="m-lbl">Trees Equivalent</div>
+          <div class="m-val" id="carbon-trees">0</div>
+          <div class="m-sub">planted offset</div>
+        </div>
+      </div>
+      
+      <div class="carbon-ring-wrap">
+        <div class="carbon-ring">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#10B981" stroke-width="8"
+              stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" id="carbon-ring-fill"/>
+          </svg>
+          <div class="carbon-ring-text">
+            <div class="cr-val" id="cr-val">0</div>
+            <div class="cr-lbl">KG CO₂</div>
+          </div>
+        </div>
+        <div class="carbon-info">
+          <div class="ci-title" id="ci-title">Carbon Newcomer</div>
+          <div class="ci-rank" id="ci-rank">🌱 GREEN TIER</div>
+          <div class="ci-desc" id="ci-desc">You're just getting started. Every kWh of renewable energy you buy saves 0.82 kg CO₂ compared to India's grid average.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="c-title">ACHIEVEMENT BADGES</div>
+      <div class="badges-row" id="badges-row"></div>
+    </div>
+  </section>
+
+  <!-- ARIA -->
+  <section class="page-sec" id="s-aria">
+    <div class="grid2">
+      <div class="card">
+        <div class="c-title">🤖 ARIA — AI ENERGY ADVISOR</div>
+        <div class="aria-messages" id="aria-msgs">
+          <div class="aria-msg ai">Hi! I'm ARIA, your personal energy advisor. Ask me anything — best time to buy, which source is cheapest, how to save on your bill, or about the P2P market. ⚡</div>
+        </div>
+        <div class="aria-input-row">
+          <input class="aria-input" id="aria-input" placeholder="e.g. What's the cheapest energy right now?" onkeydown="if(event.key==='Enter')sendAria()"/>
+          <button class="aria-send" onclick="sendAria()">→</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="c-title">ARIA QUICK TIPS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div onclick="ariaPrompt('What is the cheapest energy source right now?')" style="padding:11px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim)" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">☀️ What's the cheapest source right now?</div>
+          <div onclick="ariaPrompt('When is the best time to buy energy today?')" style="padding:11px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim)" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">⏰ When is the best time to buy today?</div>
+          <div onclick="ariaPrompt('How do community energy pools work and should I join one?')" style="padding:11px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim)" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">🤝 Should I join an energy pool?</div>
+          <div onclick="ariaPrompt('How much CO2 am I saving compared to grid electricity?')" style="padding:11px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim)" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">🌍 How much CO₂ am I saving?</div>
+          <div onclick="ariaPrompt('Explain how the SHA-256 hash ledger works in NEXUS')" style="padding:11px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim)" onmouseover="this.style.borderColor='var(--border-a)'" onmouseout="this.style.borderColor='var(--border)'">🔒 How does the blockchain ledger work?</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- BUY MODAL -->
+<div class="modal-overlay" id="buy-modal">
+  <div class="modal">
+    <div class="modal-title">Purchase Energy</div>
+    <div class="modal-sub">from <span id="buy-from" style="color:var(--A)">--</span></div>
+    <div class="form-row">
+      <div class="form-label">AMOUNT (KWH)</div>
+      <input class="form-input" id="buy-kwh" type="number" min="1" max="500" value="10" oninput="updateBuyPrice()"/>
+    </div>
+    <div class="modal-price-box">
+      <div class="mpb-row"><span>Base Price</span><span id="bp-base">--</span></div>
+      <div class="mpb-row"><span>Weather Adjustment</span><span id="bp-weather">--</span></div>
+      <div class="mpb-row"><span>Govt Subsidy</span><span id="bp-subsidy">--</span></div>
+      <div class="mpb-row"><span id="bp-bulk-lbl">Bulk Discount</span><span id="bp-bulk">--</span></div>
+      <div class="mpb-row"><span>Platform Fee</span><span id="bp-platform">--</span></div>
+      <div class="mpb-row"><span>CO₂ Saved</span><span id="bp-co2" style="color:var(--green)">--</span></div>
+      <div class="mpb-total"><span>Total Amount</span><span id="bp-total">₹--</span></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeBuyModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmPurchase()">⚡ Confirm & Pay</button>
+    </div>
+  </div>
+</div>
+
+<!-- POOL MODAL -->
+<div class="modal-overlay" id="pool-modal">
+  <div class="modal">
+    <div class="modal-title">Create Energy Pool</div>
+    <div class="modal-sub">Invite others to save 8% with bulk buying</div>
+    <div class="form-row">
+      <div class="form-label">POOL NAME</div>
+      <input class="form-input" id="pool-name-inp" placeholder="e.g. South Block Solar Club"/>
+    </div>
+    <div class="form-row">
+      <div class="form-label">TARGET KWH (min 50)</div>
+      <input class="form-input" id="pool-kwh-inp" type="number" min="50" value="100"/>
+    </div>
+    <div class="form-row">
+      <div class="form-label">ENERGY SOURCE</div>
+      <select class="form-input" id="pool-type-inp">
+        <option value="solar">☀️ Solar</option>
+        <option value="wind">💨 Wind</option>
+        <option value="biogas">🌿 Biogas</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closePoolModal()">Cancel</button>
+      <button class="btn-confirm" onclick="submitCreatePool()">🤝 Create Pool</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="modal-overlay" id="logout-modal">
+  <div class="logout-modal modal">
+    <div class="modal-title">Sign Out?</div>
+    <div class="modal-sub">You'll be returned to the login page. Your data is saved in NEXUS.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeLogoutModal()">Stay</button>
+      <button class="btn-logout-confirm" onclick="confirmLogout()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── AUTH ─────────────────────────────────────────
+// Always read fresh from localStorage — never cache in a variable that can go stale
+function getToken() { return localStorage.getItem('nx_token') || ''; }
+function getUser()  { return JSON.parse(localStorage.getItem('nx_user') || 'null'); }
+
+const user = getUser();
+if (!user || (user.role !== 'consumer' && user.role !== 'demo')) {
+  window.location.href = '/';
+}
+
+document.getElementById('s-uname').textContent = user?.name || user?.full_name || 'Consumer';
+document.getElementById('s-avatar').textContent = (user?.name || user?.full_name || 'C')[0].toUpperCase();
+
+// api() always reads fresh token — survives Flask restarts
+function api(url, opt = {}) {
+  return fetch(url, {
+    ...opt,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getToken(),
+      ...(opt.headers || {})
+    }
+  }).then(r => r.json()).catch(() => ({}));
+}
+
+// ─── STATE ────────────────────────────────────────
+let allListings = [];
+let myTxs = [];
+let currentFilter = 'all';
+let activeListing = null;
+let weatherData = {};
+let mapConsumer = null;
+
+// ─── INIT ─────────────────────────────────────────
+(async function init() {
+  const [wx, listings, carbon] = await Promise.all([
+    api(`/api/weather?lat=${user?.location_lat||22.7196}&lon=${user?.location_lon||75.8577}`),
+    api(`/api/listings?lat=${user?.location_lat||22.7196}&lon=${user?.location_lon||75.8577}`),
+    api('/api/carbon')
+  ]);
+
+  weatherData = wx;
+  // app.py /api/listings returns array directly (enriched with current_price etc.)
+  allListings = Array.isArray(listings) ? listings : (listings.listings || []);
+
+  await loadMyTxs();
+
+  updateWeatherUI(wx);
+  updateMetrics();
+  updateRates(wx);
+  renderAdvisor(wx);
+  renderForecast(wx);
+  renderOverviewTx();
+  renderCarbonSection(carbon);
+})();
+
+// ─── WEATHER ──────────────────────────────────────
+// app.py fetch_weather() already converts wind to km/h and returns as wind_speed
+// DO NOT multiply by 3.6 again
+function updateWeatherUI(wx) {
+  if (!wx || wx.error) return;
+  const t    = Math.round(wx.temp || 0);
+  const cl   = wx.clouds ?? 0;          // can be 0 on clear days — that's real data
+  const wi   = Math.round(wx.wind_speed || 0);   // already km/h from app.py
+  const hum  = wx.humidity || 0;
+  const city = wx.city || 'Indore';
+
+  document.getElementById('sw-temp').textContent  = t + '°';
+  document.getElementById('sw-cond').textContent  = wx.condition || '–';
+  document.getElementById('sw-cloud').textContent = cl;
+  document.getElementById('sw-wind').textContent  = wi;
+  document.getElementById('sw-hum').textContent   = hum;
+  document.getElementById('sw-city').textContent  = city;
+  document.getElementById('w-pill-top').textContent = `${wx.icon || '⛅'} ${t}°C — ${cl}% cloud`;
+}
+
+function refreshAdvisor() {
+  api(`/api/weather?lat=${user?.location_lat||22.7196}&lon=${user?.location_lon||75.8577}`)
+    .then(wx => { weatherData = wx; updateWeatherUI(wx); renderAdvisor(wx); renderForecast(wx); updateRates(wx); });
+}
+
+// ─── RATES ────────────────────────────────────────
+// Use listings from API (they already have current_price from backend pricing engine)
+// Fall back to local calculation if no listings available
+function updateRates(wx) {
+  const cloud = wx?.clouds ?? 30;
+  const wind  = wx?.wind_speed ?? 14.4;   // already km/h
+
+  // Try to get prices from actual listings first
+  const solar  = allListings.filter(l => l.energy_type === 'solar');
+  const windL  = allListings.filter(l => l.energy_type === 'wind');
+  const biogas = allListings.filter(l => l.energy_type === 'biogas');
+
+  const avg = arr => arr.length ? arr.reduce((s,l)=>s+(l.current_price||l.base_price||0),0)/arr.length : null;
+
+  const solarRate  = avg(solar)  ?? calcRate('solar', 3.0, cloud, wind);
+  const windRate   = avg(windL)  ?? calcRate('wind', 3.5, cloud, wind);
+  const biogasRate = avg(biogas) ?? calcRate('biogas', 4.0, cloud, wind);
+
+  document.getElementById('rate-solar').textContent  = '₹' + solarRate.toFixed(2);
+  document.getElementById('rate-wind').textContent   = '₹' + windRate.toFixed(2);
+  document.getElementById('rate-biogas').textContent = '₹' + biogasRate.toFixed(2);
+
+  // Show price direction reason
+  if (document.getElementById('rate-solar-reason')) {
+    document.getElementById('rate-solar-reason').textContent = cloud < 20 ? '↓ Clear sky surplus' : cloud > 70 ? '↑ Cloud cover premium' : '◉ Moderate conditions';
+    document.getElementById('rate-wind-reason').textContent  = wind > 25 ? '↓ Wind surplus' : wind < 5 ? '↑ Calm wind premium' : '◉ Moderate conditions';
+  }
+}
+
+// Local fallback rate calculation (mirrors app.py calculate_price logic)
+function calcRate(type, base, cloud, wind) {
+  let mod = 0;
+  const subsidies = { solar: 0.50, wind: 0.30, biogas: 0.20 };
+  if (type === 'solar') {
+    if (cloud < 20)      mod = -1.5;
+    else if (cloud < 40) mod = -0.6;
+    else if (cloud < 70) mod =  0.8;
+    else                 mod =  2.2;
+  } else if (type === 'wind') {
+    if (wind > 25)      mod = -2.2;
+    else if (wind > 15) mod = -1.0;
+    else if (wind < 5)  mod =  2.0;
+  }
+  const platformFee = (base + mod - subsidies[type]) * 0.015;
+  return Math.max(1.5, Math.min(12, base + mod - subsidies[type] + platformFee));
+}
+
+// ─── ADVISOR ──────────────────────────────────────
+function renderAdvisor(wx) {
+  const cloud = wx?.clouds ?? 30;
+  const wind  = wx?.wind_speed ?? 14.4;   // already km/h
+  let rec, reason;
+
+  if (cloud < 25) {
+    rec    = '☀️ Buy Solar Now — Best Value';
+    reason = `Clear skies (${cloud}% cloud) are driving solar surplus. Prices are well below baseline. Best time to buy solar today.`;
+  } else if (wind > 25) {
+    rec    = '💨 Buy Wind Now — Surplus Active';
+    reason = `Strong winds (${Math.round(wind)} km/h) mean high wind output and low prices — perfect time to buy wind energy.`;
+  } else if (cloud > 70) {
+    rec    = '🌿 Buy Biogas — Stable Baseload';
+    reason = `Heavy cloud (${cloud}%) reducing solar availability. Biogas remains stable — safest option right now.`;
+  } else {
+    rec    = '⚖️ Mixed Conditions — Any Source OK';
+    reason = `Moderate conditions (${cloud}% cloud, ${Math.round(wind)} km/h wind). All sources fairly priced. Consider joining a pool for 8% off.`;
+  }
+  document.getElementById('adv-rec').textContent    = rec;
+  document.getElementById('adv-reason').textContent = reason;
+}
+
+// ─── FORECAST ─────────────────────────────────────
+function renderForecast(wx) {
+  const cloud = wx?.clouds ?? 30;
+  const now   = new Date();
+  const bars  = document.getElementById('forecast-bar');
+  bars.innerHTML = '';
+  const prices = Array.from({length:6}, (_, i) => {
+    const tc = cloud + Math.sin((now.getHours() + i) * 0.5) * 15;
+    return calcRate('solar', 3.0, Math.max(0, Math.min(100, tc)), wx?.wind_speed ?? 14.4);
+  });
+  const minP = Math.min(...prices), maxP = Math.max(...prices);
+  prices.forEach((p, i) => {
+    const isBest = p === minP;
+    const h = 30 + ((p - minP) / (maxP - minP + 0.01)) * 30;
+    const hLabel = new Date(now.getTime() + i * 3600000).getHours() + 'h';
+    const col = document.createElement('div');
+    col.className = 'fb-col';
+    col.innerHTML = `<div class="fb-price">${isBest ? '★' : ''} ₹${p.toFixed(2)}</div>
+      <div class="fb-bar${isBest ? ' best' : ''}" style="height:${h}px"></div>
+      <div class="fb-time">${hLabel}</div>`;
+    bars.appendChild(col);
+  });
+}
+
+// ─── METRICS ──────────────────────────────────────
+function updateMetrics() {
+  const totalSpent = myTxs.reduce((s, t) => s + (t.total_cost || 0), 0);
+  const totalKwh   = myTxs.reduce((s, t) => s + (t.kwh || 0), 0);
+  const co2        = (totalKwh * 0.82).toFixed(1);
+  document.getElementById('m-spent').textContent    = '₹' + Math.round(totalSpent).toLocaleString('en-IN');
+  document.getElementById('m-spent-sub').textContent = myTxs.length + ' transactions';
+  document.getElementById('m-co2').textContent      = co2 + ' kg';
+  document.getElementById('m-kwh').textContent      = Math.round(totalKwh) + ' kWh';
+  document.getElementById('m-kwh-sub').textContent  = 'avg ₹' + (totalKwh > 0 ? (totalSpent / totalKwh).toFixed(2) : '--') + '/kWh';
+  document.getElementById('m-trades').textContent   = myTxs.length;
+}
+
+// ─── OVERVIEW TX ──────────────────────────────────
+function renderOverviewTx() {
+  const container = document.getElementById('overview-tx');
+  const recent = myTxs.slice(0, 4);
+  if (!recent.length) {
+    container.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:20px">No purchases yet. Head to the Marketplace!</div>';
+    return;
+  }
+  const icons = { solar: '☀️', wind: '💨', biogas: '🌿' };
+  container.innerHTML = recent.map(tx => `
+    <div class="tx-row">
+      <div class="tx-icon ${tx.energy_type || 'solar'}">${icons[tx.energy_type] || '⚡'}</div>
+      <div class="tx-info">
+        <div class="tx-producer">${tx.from_name || 'Producer'} → You</div>
+        <div class="tx-detail">${tx.kwh || 0} kWh · ${new Date(tx.created_at || Date.now()).toLocaleDateString()}</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount">₹${(tx.total_cost || 0).toFixed(2)}</div>
+        <div style="color:var(--green);font-size:10px;margin-top:2px">-${((tx.kwh||0)*0.82).toFixed(1)}kg CO₂</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── HISTORY TX ───────────────────────────────────
+function renderHistoryTx() {
+  const container = document.getElementById('history-tx');
+  if (!myTxs.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;font-family:IBM Plex Mono,monospace;color:var(--text-faint)">No purchase history yet. Start buying energy!</div>';
+    return;
+  }
+  const icons = { solar: '☀️', wind: '💨', biogas: '🌿' };
+  container.innerHTML = myTxs.map(tx => `
+    <div class="tx-row">
+      <div class="tx-icon ${tx.energy_type || 'solar'}">${icons[tx.energy_type] || '⚡'}</div>
+      <div class="tx-info">
+        <div class="tx-producer">${tx.from_name || 'Producer'} → You</div>
+        <div class="tx-detail">${tx.kwh || 0} kWh · ₹${(tx.final_price||tx.total_cost||0).toFixed(2)}/kWh · ${new Date(tx.created_at || Date.now()).toLocaleDateString()}</div>
+        <div class="tx-hash">${tx.short_hash || ''}</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount">₹${(tx.total_cost || 0).toFixed(2)}</div>
+        <div style="color:var(--green);font-size:10px;margin-top:2px">-${((tx.kwh||0)*0.82).toFixed(1)}kg CO₂</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── TRANSACTIONS ─────────────────────────────────
+async function loadMyTxs() {
+  try {
+    // /api/transactions/mine returns only current user's transactions
+    const data = await api('/api/transactions/mine');
+    const apiTxs = Array.isArray(data) ? data : [];
+
+    // Merge with localStorage (for demo mode purchases made this session)
+    const localTxs = JSON.parse(localStorage.getItem('nexus_my_txs') || '[]');
+    const all = [...apiTxs, ...localTxs];
+    const seen = new Set();
+    myTxs = all.filter(tx => {
+      const key = tx.id || `${tx.kwh}_${tx.created_at}`;
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    localStorage.setItem('nexus_my_txs', JSON.stringify(myTxs));
+  } catch (e) {
+    myTxs = JSON.parse(localStorage.getItem('nexus_my_txs') || '[]');
+  }
+  renderOverviewTx();
+  renderHistoryTx();
+  updateMetrics();
+}
+
+// ─── MARKETPLACE ──────────────────────────────────
+function filterListings(type, el) {
+  currentFilter = type;
+  document.querySelectorAll('.sf-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderListings();
+}
+
+function renderListings() {
+  const c = document.getElementById('listings-container');
+  const filtered = currentFilter === 'all' ? allListings : allListings.filter(l => l.energy_type === currentFilter);
+  if (!filtered.length) {
+    c.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--text-faint)">No listings available. Check back soon.</div>';
+    return;
+  }
+  const dirLabel = { up: '↑ Price up', down: '↓ Price down', neutral: '◉ Stable' };
+  c.innerHTML = filtered.map(l => {
+    // app.py returns current_price (already fully calculated) and price_direction
+    const price = l.current_price || l.base_price || 3.5;
+    const dir   = l.price_direction || 'neutral';
+    return `<div class="listing-card" onclick="openBuyModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">
+      <div class="lc-header">
+        <div class="lc-name">${l.producer_name || 'Energy Producer'}</div>
+        <div class="lc-type ${l.energy_type}">${l.energy_type || 'solar'}</div>
+      </div>
+      <div class="lc-price-row">
+        <div class="lc-price">₹${price.toFixed(2)}</div>
+        <div class="lc-unit">/ kWh</div>
+      </div>
+      <div class="lc-dir ${dir}">${dirLabel[dir] || '◉ Stable'}</div>
+      <div class="lc-meta">
+        <div class="lc-meta-item">⚡ Avail: <span>${l.available_kwh || 0} kWh</span></div>
+        <div class="lc-meta-item">📍 Dist: <span>${l.distance_km ? l.distance_km.toFixed(1) + 'km' : '--'}</span></div>
+        <div class="lc-meta-item">🌱 CO₂: <span>-${((l.available_kwh||0)*0.82).toFixed(0)}kg</span></div>
+        <div class="lc-meta-item">💡 Base: <span>₹${l.base_price}</span></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-bottom:10px;line-height:1.4">${l.price_reason ? l.price_reason.slice(0,80) : ''}</div>
+      <button class="lc-buy-btn" onclick="event.stopPropagation();openBuyModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">⚡ Buy Now</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── BUY MODAL ────────────────────────────────────
+// app.py listing fields: producer_name, base_price, current_price, pricing{}, energy_type
+function openBuyModal(listing) {
+  activeListing = listing;
+  document.getElementById('buy-from').textContent = listing.producer_name || 'Producer';
+  document.getElementById('buy-kwh').value = '10';
+  updateBuyPrice();
+  document.getElementById('buy-modal').classList.add('open');
+}
+
+function closeBuyModal() { document.getElementById('buy-modal').classList.remove('open'); }
+
+function updateBuyPrice() {
+  if (!activeListing) return;
+  const kwh = parseFloat(document.getElementById('buy-kwh').value) || 1;
+
+  // Use pre-computed pricing from app.py if available, else calculate locally
+  const pricing = activeListing.pricing || {};
+  const basePrice   = activeListing.base_price || 3.0;
+  const weatherMod  = pricing.weather_modifier ?? 0;
+  const subsidy     = pricing.subsidy_applied ?? 0;
+  const txFee       = pricing.transmission_fee ?? 0;
+  const platformFee = pricing.platform_fee ?? 0;
+  let   unitPrice   = activeListing.current_price || basePrice;
+
+  // Bulk discount (≥50 kWh)
+  const bulkDisc = kwh >= 50 ? unitPrice * 0.08 : 0;
+  const finalUnit = Math.max(1.5, unitPrice - bulkDisc);
+  const total = finalUnit * kwh;
+  const co2   = (kwh * 0.82).toFixed(1);
+
+  document.getElementById('bp-base').textContent      = '₹' + basePrice.toFixed(2) + '/kWh';
+  document.getElementById('bp-weather').textContent   = (weatherMod >= 0 ? '+' : '') + '₹' + weatherMod.toFixed(2);
+  document.getElementById('bp-subsidy').textContent   = '-₹' + subsidy.toFixed(2);
+  document.getElementById('bp-bulk').textContent      = bulkDisc > 0 ? '-8% (₹' + bulkDisc.toFixed(2) + ')' : '—';
+  document.getElementById('bp-bulk-lbl').textContent  = 'Bulk Discount ' + (kwh >= 50 ? '✓' : '(need ≥50 kWh)');
+  document.getElementById('bp-platform').textContent  = '₹' + platformFee.toFixed(2);
+  document.getElementById('bp-co2').textContent       = '-' + co2 + ' kg CO₂';
+  document.getElementById('bp-total').textContent     = '₹' + total.toFixed(2);
+}
+
+async function confirmPurchase() {
+  if (!activeListing) return;
+  const kwh       = parseFloat(document.getElementById('buy-kwh').value) || 1;
+  const unitPrice = activeListing.current_price || activeListing.base_price || 3.0;
+  const bulkDisc  = kwh >= 50 ? unitPrice * 0.08 : 0;
+  const total     = (unitPrice - bulkDisc) * kwh;
+
+  const btn = document.querySelector('#buy-modal .btn-confirm');
+  btn.textContent = 'PROCESSING...'; btn.disabled = true;
+
+  try {
+    const order = await api('/api/payment/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ amount: Math.round(total * 100), currency: 'INR' })
+    });
+
+    if (order.demo || (order.order_id && order.order_id.startsWith('demo_order_'))) {
+      // Demo mode
+      const tradeRes = await api('/api/trade', {
+        method: 'POST',
+        body: JSON.stringify({
+          listing_id: activeListing.id,
+          kwh,
+          payment_id: order.order_id || 'demo',
+          energy_type: activeListing.energy_type,
+          consumer_lat: user?.location_lat || 22.7196,
+          consumer_lon: user?.location_lon || 75.8577
+        })
+      });
+      if (tradeRes.success) {
+        const newTx = tradeRes.transaction || {
+          kwh, total_cost: total, energy_type: activeListing.energy_type,
+          from_name: activeListing.producer_name || 'Producer',
+          created_at: new Date().toISOString(),
+          short_hash: '0x' + Math.random().toString(16).substring(2, 10).toUpperCase()
+        };
+        myTxs.unshift(newTx);
+        localStorage.setItem('nexus_my_txs', JSON.stringify(myTxs));
+        updateMetrics(); renderOverviewTx(); renderHistoryTx();
+        closeBuyModal();
+        toast(`⚡ Purchased ${kwh} kWh for ₹${total.toFixed(2)}!`);
+        // Refresh listings so available_kwh updates
+        api(`/api/listings?lat=${user?.location_lat||22.7196}&lon=${user?.location_lon||75.8577}`)
+          .then(d => { allListings = Array.isArray(d) ? d : (d.listings || []); });
+      } else {
+        toast('Trade failed: ' + (tradeRes.error || 'Unknown error'), false);
+      }
+    } else {
+      // Razorpay live
+      const options = {
+        key: order.key || '',
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        order_id: order.order_id || order.id,
+        name: 'NEXUS Energy',
+        description: `${kwh} kWh from ${activeListing.producer_name || 'Producer'}`,
+        handler: async function(response) {
+          const verify = await api('/api/payment/verify', {
+            method: 'POST',
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          if (verify.verified) {
+            const tr = await api('/api/trade', {
+              method: 'POST',
+              body: JSON.stringify({
+                listing_id: activeListing.id, kwh,
+                payment_id: verify.payment_id,
+                energy_type: activeListing.energy_type,
+                consumer_lat: user?.location_lat || 22.7196,
+                consumer_lon: user?.location_lon || 75.8577
+              })
+            });
+            if (tr.success) {
+              myTxs.unshift(tr.transaction || { kwh, total_cost: total, energy_type: activeListing.energy_type, from_name: activeListing.producer_name, created_at: new Date().toISOString() });
+              localStorage.setItem('nexus_my_txs', JSON.stringify(myTxs));
+              updateMetrics(); renderOverviewTx(); renderHistoryTx();
+              closeBuyModal(); toast(`⚡ Purchased ${kwh} kWh for ₹${total.toFixed(2)}!`);
+            }
+          }
+        },
+        theme: { color: '#00CED4' }
+      };
+      if (window.Razorpay) new window.Razorpay(options).open();
+      else toast('Payment gateway unavailable', false);
+    }
+  } catch (err) {
+    toast('Purchase failed: ' + err.message, false);
+  } finally {
+    btn.textContent = '⚡ Confirm & Pay'; btn.disabled = false;
+  }
+}
+
+// ─── POOLS ────────────────────────────────────────
+// app.py pool fields: id, producer_name, energy_type, target_kwh, total_committed, discount_unlocked, price_per_unit
+async function loadPools() {
+  const data  = await api('/api/pools');
+  const pools = Array.isArray(data) ? data : (data.pools || []);
+  const c = document.getElementById('pools-list');
+  if (!pools.length) {
+    c.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:20px">No active pools. Create one!</div>';
+    return;
+  }
+  c.innerHTML = pools.map(p => {
+    const committed = p.total_committed || 0;
+    const target    = p.target_kwh || 100;
+    const pct       = Math.min(100, Math.round((committed / target) * 100));
+    const filled    = p.discount_unlocked || committed >= target;
+    const memberCount = (p.pool_members || p.members || []).length;
+    return `<div class="pool-card">
+      <div class="pool-header">
+        <div class="pool-name">${p.name || p.producer_name + '\'s Pool'} (${p.energy_type || 'solar'})</div>
+        <div class="pool-disc">${filled ? '8% ACTIVE' : '8% WHEN FULL'}</div>
+      </div>
+      <div class="pool-progress-bg"><div class="pool-progress-fill" style="width:${pct}%"></div></div>
+      <div class="pool-meta">
+        <span>${committed.toFixed(0)} / ${target} kWh (${pct}%)</span>
+        <span>${memberCount} member${memberCount !== 1 ? 's' : ''} · ₹${(p.price_per_unit||3).toFixed(2)}/kWh${filled?' → ₹'+(p.discounted_price||((p.price_per_unit||3)*0.92)).toFixed(2):''}</span>
+      </div>
+      <button class="pool-join-btn" ${filled ? 'disabled' : ''} onclick="joinPool('${p.id}')">
+        ${filled ? '✓ Pool Filled — Discount Active' : '+ Join Pool'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function joinPool(poolId) {
+  const kwh = prompt('How many kWh do you want to contribute?');
+  if (!kwh || isNaN(kwh)) return;
+  const res = await api(`/api/pools/${poolId}/join`, { method: 'POST', body: JSON.stringify({ kwh: parseFloat(kwh) }) });
+  if (res.success) { toast(`🤝 Joined! Pool at ${res.total_committed?.toFixed(0)} kWh. ${res.discount_unlocked ? '🎉 8% discount unlocked!' : ''}`); loadPools(); }
+  else toast('Could not join pool: ' + (res.error || 'Unknown error'), false);
+}
+
+function showCreatePool() { document.getElementById('pool-modal').classList.add('open'); }
+function closePoolModal()  { document.getElementById('pool-modal').classList.remove('open'); }
+
+async function submitCreatePool() {
+  const name        = document.getElementById('pool-name-inp').value.trim();
+  const target_kwh  = parseFloat(document.getElementById('pool-kwh-inp').value) || 100;
+  const energy_type = document.getElementById('pool-type-inp').value;
+  if (!name) { toast('Please enter a pool name.', false); return; }
+  const res = await api('/api/pools', { method: 'POST', body: JSON.stringify({ name, target_kwh, energy_type, price_per_unit: 3.0 }) });
+  if (res.id || res.success) { toast('🤝 Pool created!'); closePoolModal(); loadPools(); }
+  else toast('Could not create pool: ' + (res.error || ''), false);
+}
+
+// ─── CARBON ───────────────────────────────────────
+// app.py /api/carbon returns: co2_kg, rank, green_credits, badges[]
+function renderCarbonSection(carbonData) {
+  const co2  = carbonData?.co2_kg ?? myTxs.reduce((s, t) => s + (t.kwh || 0), 0) * 0.82;
+  const credits = carbonData?.green_credits ?? (co2 * 0.5).toFixed(1);
+  const rank = carbonData?.rank || (co2 < 10 ? 'GREEN' : co2 < 50 ? 'SILVER' : co2 < 100 ? 'GOLD' : 'PLATINUM');
+  const pct  = Math.min(100, (co2 / 200) * 100);
+  const treesEquivalent = Math.floor(co2 / 22); // Approx: 1 tree absorbs 22kg CO2 per year
+
+  // Update metrics
+  document.getElementById('carbon-co2').textContent = co2.toFixed(1) + ' kg';
+  document.getElementById('carbon-credits').textContent = credits;
+  document.getElementById('carbon-rank').textContent = rank;
+  document.getElementById('carbon-trees').textContent = treesEquivalent;
+  
+  // Update ring
+  document.getElementById('cr-val').textContent = co2.toFixed(1);
+  document.getElementById('ci-rank').textContent = `🌱 ${rank} TIER`;
+  document.getElementById('carbon-ring-fill').setAttribute('stroke-dashoffset', (314 - (314 * pct / 100)).toFixed(1));
+
+  const titles = { 
+    GREEN: 'Carbon Newcomer', 
+    SILVER: 'Green Contributor', 
+    GOLD: 'Climate Advocate', 
+    PLATINUM: 'Platinum Guardian' 
+  };
+  document.getElementById('ci-title').textContent  = titles[rank] || 'Carbon Newcomer';
+  document.getElementById('ci-desc').textContent   = rank === 'PLATINUM'
+    ? `🏆 Elite status! You've saved ${co2.toFixed(1)} kg CO₂ — equivalent to planting ${treesEquivalent} trees this year.`
+    : `Every kWh of renewable energy saves 0.82 kg CO₂. You've saved ${co2.toFixed(1)} kg — equivalent to planting ${treesEquivalent} trees!`;
+
+  // Badges from API or local
+  const badges = carbonData?.badges || [
+    { icon: '⚡', name: 'First Trade',        unlocked: myTxs.length >= 1, threshold: 0 },
+    { icon: '🌱', name: 'Green Starter',       unlocked: co2 >= 10,        threshold: 10 },
+    { icon: '🏆', name: 'Carbon Hero',         unlocked: co2 >= 50,        threshold: 50 },
+    { icon: '🌍', name: 'Climate Champion',    unlocked: co2 >= 100,       threshold: 100 },
+    { icon: '💎', name: 'Platinum Guardian',   unlocked: co2 >= 200,       threshold: 200 },
+  ];
+  document.getElementById('badges-row').innerHTML = badges.map(b =>
+    `<div class="badge ${b.unlocked ? 'earned' : ''}">
+      <div class="badge-icon">${b.icon}</div>
+      <div>
+        <div style="font-size:10px;font-family:'Mulish',sans-serif;font-weight:600">${b.name}</div>
+        <div style="font-size:8px">${b.unlocked ? 'Earned ✓' : '≥' + b.threshold + ' kg CO₂'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── MAP ──────────────────────────────────────────
+function initConsumerMap() {
+  if (mapConsumer) return;
+  const lat = user?.location_lat || 22.7196;
+  const lon = user?.location_lon || 75.8577;
+  mapConsumer = L.map('consumer-map', { center: [lat, lon], zoom: 10, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapConsumer);
+
+  const colors = { solar: '#F5A623', wind: '#00CED4', biogas: '#10B981' };
+  const icons  = { solar: '☀️', wind: '💨', biogas: '🌿' };
+
+  allListings.forEach(l => {
+    const mlat = l.location_lat, mlon = l.location_lon;
+    if (!mlat || !mlon) return;
+    const c    = colors[l.energy_type] || '#00CED4';
+    const icon = L.divIcon({
+      html: `<div style="width:32px;height:32px;background:${c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid rgba(255,255,255,0.3)">${icons[l.energy_type] || '⚡'}</div>`,
+      iconSize: [32, 32], iconAnchor: [16, 16], className: ''
+    });
+    const price = l.current_price || l.base_price || 3.5;
+    L.marker([mlat, mlon], { icon }).addTo(mapConsumer)
+      .bindPopup(`<b>${l.producer_name || 'Producer'}</b><br/>₹${price.toFixed(2)}/kWh · ${l.available_kwh || 0} kWh<br/><button onclick="openBuyModal(${JSON.stringify(l).replace(/"/g,'&quot;')})" style="margin-top:6px;padding:4px 10px;background:#00CED4;border:none;border-radius:4px;cursor:pointer;font-weight:bold">Buy</button>`);
+  });
+
+  L.circleMarker([lat, lon], { radius: 8, fillColor: '#8B5CF6', fillOpacity: 0.9, color: '#fff', weight: 2 })
+    .addTo(mapConsumer).bindPopup('📍 Your Location');
+}
+
+// ─── ARIA CHAT ────────────────────────────────────
+let ariaHistory = [];
+
+function ariaPrompt(msg) {
+  document.getElementById('aria-input').value = msg;
+  sendAria();
+}
+
+async function sendAria() {
+  const input = document.getElementById('aria-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addAriaMsg(msg, 'user');
+  const thinkingId = 'aria-thinking-' + Date.now();
+  addAriaMsg('⏳ Thinking…', 'ai thinking', thinkingId);
+  ariaHistory.push({ role: 'user', content: msg });
+
+  // Always read fresh from localStorage
+  const tok = getToken();
+  const usr = getUser();
+
+  console.group('🤖 ARIA Request');
+  console.log('token:', tok ? tok.slice(0, 16) + '...' : '❌ EMPTY');
+  console.log('message:', msg);
+  console.groupEnd();
+
+  if (!tok) {
+    document.getElementById(thinkingId)?.remove();
+    addAriaMsg('⚠️ No auth token. Please sign out and sign in again.', 'ai');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/ai-advisor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body: JSON.stringify({
+        message: msg,
+        role: usr?.role || 'consumer',
+        lat: usr?.location_lat || 22.7196,
+        lon: usr?.location_lon || 75.8577
+      })
+    });
+    const rawText = await res.text();
+    console.group('🤖 ARIA Response');
+    console.log('HTTP status:', res.status);
+    console.log('Raw body:', rawText);
+    console.groupEnd();
+
+    document.getElementById(thinkingId)?.remove();
+    let data = {};
+    try { data = JSON.parse(rawText); } catch(e) {
+      addAriaMsg('⚠️ Server error: ' + rawText.slice(0, 100), 'ai'); return;
+    }
+    if (res.status === 401) {
+      addAriaMsg(`🔒 Auth failed: ${data.error || 'Token rejected'}. Try signing out and back in.`, 'ai'); return;
+    }
+    const reply  = data.reply || data.message || (data.error ? '⚠️ ' + data.error : '⚠️ No reply from server.');
+    const engine = data.powered_by || '';
+    const suffix = engine === 'rule-engine' ? '\n\n_(Rule-based — Groq not active)_' : '';
+    addAriaMsg(reply + suffix, 'ai');
+    ariaHistory.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    document.getElementById(thinkingId)?.remove();
+    addAriaMsg('⚠️ Network error: ' + err.message, 'ai');
+  }
+}
+
+function addAriaMsg(text, cls, id = '') {
+  const box = document.getElementById('aria-msgs');
+  const div = document.createElement('div');
+  div.className = 'aria-msg ' + cls;
+  if (id) div.id = id;
+  div.innerHTML = text.replace(/\n/g, '<br/>').replace(/_(.*?)_/g, '<em>$1</em>');
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── LOGOUT ───────────────────────────────────────
+function showLogoutModal()  { document.getElementById('logout-modal').classList.add('open'); }
+function closeLogoutModal() { document.getElementById('logout-modal').classList.remove('open'); }
+function confirmLogout() {
+  fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } })
+    .finally(() => {
+      localStorage.removeItem('nx_user'); localStorage.removeItem('nx_token');
+      localStorage.removeItem('nexus_my_txs');
+      window.location.href = '/';
+    });
+}
+
+// ─── NAV ──────────────────────────────────────────
+const headings = {
+  overview: 'Consumer <span>Overview</span>',
+  market:   'Energy <span>Marketplace</span>',
+  pools:    'Community <span>Pools</span>',
+  map:      'Grid <span>Map</span>',
+  history:  'Purchase <span>History</span>',
+  carbon:   'Carbon <span>Impact</span>',
+  aria:     'ARIA <span>Advisor</span>'
+};
+function goTo(sec, el) {
+  document.querySelectorAll('.page-sec').forEach(s => s.classList.remove('on'));
+  document.getElementById('s-' + sec)?.classList.add('on');
+  document.querySelectorAll('.nav').forEach(n => n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.getElementById('page-h').innerHTML = headings[sec] || sec;
+  if (sec === 'market')  renderListings();
+  if (sec === 'pools')   loadPools();
+  if (sec === 'history') renderHistoryTx();
+  if (sec === 'carbon')  api('/api/carbon').then(c => renderCarbonSection(c));
+  if (sec === 'map')     setTimeout(() => initConsumerMap(), 100);
+}
+
+// ─── TOAST ────────────────────────────────────────
+function toast(msg, ok = true) {
+  const el = document.getElementById('toast');
+  el.style.borderColor = ok ? 'var(--A)' : 'var(--rose)';
+  el.style.color = ok ? 'var(--A)' : 'var(--rose)';
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+const style = document.createElement('style');
+style.textContent = `.leaflet-tile{filter:brightness(0.22) saturate(0.35) hue-rotate(200deg)!important;}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
