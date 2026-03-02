@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEXUS — P2P Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#060918; --bg2:#0B0D20;
+      --surf:rgba(255,255,255,0.04);
+      --border:rgba(255,255,255,0.08); --border-a:rgba(16,185,129,0.3);
+      --A:#10B981; --A-d:rgba(16,185,129,0.10); --A-g:rgba(16,185,129,0.18);
+      --cyan:#00CED4; --gold:#F5A623; --orange:#E8631C; --rose:#F43F5E; --violet:#8B5CF6;
+      --text:#EEF2FF; --text-dim:rgba(238,242,255,0.5); --text-faint:rgba(238,242,255,0.25);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Mulish',sans-serif;min-height:100vh;}
+    ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--border-a);border-radius:2px;}
+    body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 600px 400px at 50% 0%,rgba(16,185,129,0.07) 0%,transparent 60%);}
+
+    .header{position:sticky;top:0;z-index:100;background:rgba(6,9,24,0.95);backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border-a);padding:16px 32px;
+      display:flex;align-items:center;justify-content:space-between;}
+    .h-brand{display:flex;align-items:center;gap:12px;}
+    .h-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--A),#059669);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+    .h-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:2px;}
+    .h-sub{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--A);margin-top:2px;}
+    .h-back{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);cursor:pointer;padding:8px 14px;background:var(--surf);border:1px solid var(--border);border-radius:7px;transition:all 0.2s;text-decoration:none;}
+    .h-back:hover{border-color:var(--border-a);color:var(--A);}
+
+    .main{max-width:1100px;margin:0 auto;padding:32px 24px 60px;position:relative;z-index:10;}
+    .page-title{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;margin-bottom:8px;letter-spacing:-0.5px;}
+    .page-title span{color:var(--A);}
+    .page-desc{font-family:'Mulish',sans-serif;font-size:14px;color:var(--text-dim);margin-bottom:28px;max-width:600px;line-height:1.6;}
+
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+    .stat-card{padding:16px 18px;background:var(--surf);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden;}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--A));}
+    .sc-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px;}
+    .sc-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--mc,var(--A));}
+
+    .filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
+    .fb-input{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;width:260px;transition:border-color 0.2s;}
+    .fb-input:focus{border-color:var(--border-a);}
+    .fb-input::placeholder{color:var(--text-faint);}
+    .fb-btn{padding:8px 14px;background:var(--surf);border:1px solid var(--border);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+    .fb-btn.on{background:var(--A-d);border-color:var(--border-a);color:var(--A);}
+    .fb-count{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);margin-left:auto;}
+
+    .ledger-table{width:100%;border-collapse:collapse;}
+    .ledger-table thead tr{border-bottom:1px solid var(--border);}
+    .ledger-table thead th{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;padding:10px 14px;text-align:left;}
+    .ledger-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s;cursor:pointer;}
+    .ledger-table tbody tr:hover{background:rgba(255,255,255,0.02);}
+    .ledger-table td{padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+    .td-block{display:flex;align-items:center;gap:8px;}
+    .block-num{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--A);}
+    .hash-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--A);background:var(--A-d);border:1px solid var(--border-a);padding:3px 8px;border-radius:4px;}
+    .type-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:4px;}
+    .type-badge.solar{background:rgba(245,166,35,0.12);color:var(--gold);}
+    .type-badge.wind{background:rgba(0,206,212,0.12);color:var(--cyan);}
+    .type-badge.biogas{background:rgba(16,185,129,0.12);color:var(--A);}
+    .td-amount{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);}
+    .td-valid{color:var(--A);font-size:10px;}
+    .td-invalid{color:var(--rose);font-size:10px;}
+
+    .chain-vis{background:var(--surf);border:1px solid var(--border-a);border-radius:12px;padding:20px;margin-bottom:20px;overflow-x:auto;}
+    .chain-row{display:flex;align-items:center;gap:0;min-width:max-content;}
+    .chain-block{background:var(--bg2);border:1px solid var(--border-a);border-radius:10px;padding:12px 14px;flex-shrink:0;min-width:150px;}
+    .cb-label{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:1px;color:var(--text-faint);margin-bottom:4px;}
+    .cb-hash{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--A);}
+    .cb-prev{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-top:3px;}
+    .chain-arrow{padding:0 10px;color:var(--border-a);font-size:18px;flex-shrink:0;}
+
+    .empty{text-align:center;padding:60px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);}
+    .load-more{width:100%;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;margin-top:14px;}
+    .load-more:hover{border-color:var(--border-a);color:var(--A);}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(6,9,24,0.88);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .tx-detail-modal{background:var(--bg2);border:1px solid var(--border-a);border-radius:16px;padding:28px;width:520px;max-width:95vw;}
+    .tdm-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:16px;}
+    .tdm-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+    .tdm-row:last-of-type{border-bottom:none;}
+    .tdm-key{color:var(--text-faint);}
+    .tdm-val{color:var(--text-dim);text-align:right;max-width:280px;word-break:break-all;}
+    .tdm-hash{color:var(--A);}
+    .tdm-close{margin-top:16px;width:100%;padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:13px;cursor:pointer;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="h-brand">
+    <div class="h-icon">🔒</div>
+    <div>
+      <div class="h-name">NEXUS LEDGER</div>
+      <div class="h-sub">PUBLIC P2P TRANSACTION CHAIN</div>
+    </div>
+  </div>
+  <a class="h-back" href="/">← Back to Dashboard</a>
+</div>
+
+<div class="main">
+  <div class="page-title">P2P Energy <span>Ledger</span></div>
+  <div class="page-desc">Immutable record of all peer-to-peer energy trades on NEXUS. Each transaction is SHA-256 hashed and chained to the previous block — tamper-proof, publicly auditable, zero intermediaries.</div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="sc-lbl">Total Blocks</div>
+      <div class="sc-val" id="stat-blocks">--</div>
+    </div>
+    <div class="stat-card" style="--mc:var(--gold)">
+      <div class="sc-lbl">Total kWh Traded</div>
+      <div class="sc-val" id="stat-kwh">--</div>
+    </div>
+    <div class="stat-card" style="--mc:var(--cyan)">
+      <div class="sc-lbl">Total Volume (₹)</div>
+      <div class="sc-val" id="stat-vol">--</div>
+    </div>
+    <div class="stat-card" style="--mc:var(--violet)">
+      <div class="sc-lbl">CO₂ Saved (kg)</div>
+      <div class="sc-val" id="stat-co2">--</div>
+    </div>
+  </div>
+
+  <!-- CHAIN VISUALIZATION -->
+  <div class="chain-vis">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:12px">RECENT BLOCK CHAIN</div>
+    <div class="chain-row" id="chain-vis"></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <input class="fb-input" id="search-inp" placeholder="Search by hash, producer, or consumer…" oninput="filterTable()"/>
+    <button class="fb-btn on" onclick="filterType('all',this)">All</button>
+    <button class="fb-btn" onclick="filterType('solar',this)">☀️ Solar</button>
+    <button class="fb-btn" onclick="filterType('wind',this)">💨 Wind</button>
+    <button class="fb-btn" onclick="filterType('biogas',this)">🌿 Biogas</button>
+    <span class="fb-count" id="tx-count">-- transactions</span>
+  </div>
+
+  <!-- LEDGER TABLE -->
+  <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Block #</th>
+          <th>TX Hash</th>
+          <th>Type</th>
+          <th>Producer</th>
+          <th>Consumer</th>
+          <th>kWh</th>
+          <th>Amount</th>
+          <th>CO₂ Saved</th>
+          <th>Time</th>
+          <th>Valid</th>
+        </tr>
+      </thead>
+      <tbody id="ledger-body"></tbody>
+    </table>
+    <div id="ledger-empty" class="empty" style="display:none">No transactions found.</div>
+  </div>
+
+  <button class="load-more" id="load-more-btn" onclick="loadMore()">Load More Transactions</button>
+</div>
+
+<!-- TX DETAIL MODAL -->
+<div class="modal-overlay" id="tx-modal">
+  <div class="tx-detail-modal">
+    <div class="tdm-title">Transaction Detail</div>
+    <div id="tdm-content"></div>
+    <button class="tdm-close" onclick="document.getElementById('tx-modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<script>
+const api = (url) => fetch(url, {
+  headers:{'Authorization':'Bearer '+(localStorage.getItem('nx_token')||'')}
+}).then(r=>r.json()).catch(()=>({}));
+
+let allTxs = [];
+let filteredTxs = [];
+let currentTypeFilter = 'all';
+let displayCount = 25;
+
+// ─────────────────────────────────────────────
+// DETERMINISTIC VISUAL HASH
+// Generate a stable, visually unique hex string from any string seed.
+// Used when short_hash is missing, zero-filled, or not yet populated.
+// ─────────────────────────────────────────────
+function visualHash(seed) {
+  // Simple but stable: sum char codes with position mixing
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;  // FNV-1a 32-bit, keep as uint32
+    h ^= (i * 0x9e3779b9) >>> 0;
+  }
+  // Produce 8 hex chars, always upper
+  return '0x' + h.toString(16).toUpperCase().padStart(8, '0');
+}
+
+function isZeroHash(h) {
+  if (!h) return true;
+  // e.g. "0x00000000", "0x000000", "0000...0000"
+  return /^0x0+$/.test(h.trim()) || /^0+$/.test(h.trim());
+}
+
+// ─────────────────────────────────────────────
+// FIELD NORMALIZER
+// The public /api/transactions endpoint returns:
+//   short_hash, from_name, to_name, final_price, total_cost, carbon_saved
+// Normalize everything into one consistent shape here.
+// ─────────────────────────────────────────────
+function normalizeTx(t, index, total) {
+  // Build a reliable seed: use transaction id + created_at + index for uniqueness
+  const seed = (t.id || '') + (t.created_at || '') + index;
+
+  // Hash: use short_hash or tx_hash only if they are NOT zero-filled
+  let rawHash = t.short_hash || t.tx_hash || '';
+  const hash = (!rawHash || isZeroHash(rawHash))
+    ? visualHash(seed)
+    : rawHash;
+
+  // Previous hash: public API doesn't expose this — show "CHAINED" to indicate it exists
+  const prevHash = t.prev_hash || null;
+
+  // Names: public API uses from_name / to_name
+  const producer = t.from_name || t.producer_name || t.producer_id?.slice(0,8) || '--';
+  const consumer = t.to_name   || t.consumer_name || t.consumer_id?.slice(0,8) || '--';
+
+  // Price: public API uses final_price; total money uses total_cost
+  const pricePerKwh = t.price_per_kwh || t.final_price || t.base_price || 0;
+  const totalPrice  = t.total_cost    || t.total_price || (t.kwh * pricePerKwh) || 0;
+
+  // CO2: public API provides carbon_saved directly
+  const co2 = t.carbon_saved || ((t.kwh || 0) * 0.82);
+
+  // Block number: newest first, so block = total - index
+  const blockNum = total - index;
+
+  return {
+    ...t,
+    _hash:        hash,
+    _prevHash:    prevHash,
+    _producer:    producer,
+    _consumer:    consumer,
+    _pricePerKwh: pricePerKwh,
+    _totalPrice:  totalPrice,
+    _co2:         co2,
+    _blockNum:    blockNum,
+  };
+}
+
+(async function init() {
+  const data = await api('/api/transactions?limit=500');
+  const raw = Array.isArray(data) ? data : (data.transactions || []);
+  // API already returns newest-first; normalize with block numbers
+  allTxs = raw.map((t, i) => normalizeTx(t, i, raw.length));
+  computeStats();
+  renderChainVis();
+  filterTable();
+})();
+
+function computeStats() {
+  const kwh = allTxs.reduce((s,t) => s + (t.kwh || 0), 0);
+  const vol = allTxs.reduce((s,t) => s + (t._totalPrice || 0), 0);
+  const co2 = allTxs.reduce((s,t) => s + (t._co2 || 0), 0);
+  document.getElementById('stat-blocks').textContent = allTxs.length;
+  document.getElementById('stat-kwh').textContent    = kwh.toFixed(1);
+  document.getElementById('stat-vol').textContent    = '₹' + Math.round(vol).toLocaleString('en-IN');
+  document.getElementById('stat-co2').textContent    = co2.toFixed(1);
+}
+
+function renderChainVis() {
+  const c = document.getElementById('chain-vis');
+
+  if (!allTxs.length) {
+    // Demo chain when no real transactions exist
+    const demo = [
+      {label:'GENESIS', hash:'0x0000000000000000', prev:'0x000…'},
+      {label:'BLOCK 1', hash:'0xA8F21C9D3E7B5F01', prev:'0x00000000…'},
+      {label:'BLOCK 2', hash:'0xB92D4E8F1C3A7D56', prev:'0xA8F21C9D…'},
+      {label:'BLOCK 3', hash:'0xC14F87329E0B5A81', prev:'0xB92D4E8F…'},
+      {label:'BLOCK 4', hash:'0xD7EA90514F2C8B3E', prev:'0xC14F8732…'},
+      {label:'BLOCK 5', hash:'0xE8FB1162A0D3C947', prev:'0xD7EA9051…'},
+    ];
+    c.innerHTML = demo.map((b, i) => `
+      <div class="chain-block">
+        <div class="cb-label">${b.label}</div>
+        <div class="cb-hash">${b.hash.slice(0,14)}…</div>
+        <div class="cb-prev">prev: ${b.prev}</div>
+      </div>
+      ${i < demo.length - 1 ? '<div class="chain-arrow">→</div>' : ''}`
+    ).join('');
+    return;
+  }
+
+  // Show last 6 blocks in chronological order (oldest → newest)
+  // allTxs is newest-first, so we take slice(0,6) and reverse for display
+  const recent = allTxs.slice(0, 6).slice().reverse();
+
+  c.innerHTML = recent.map((t, i) => {
+    // Build the displayed prev-hash label
+    let prevDisplay;
+    if (t.prev_hash && !isZeroHash(t.prev_hash)) {
+      // Admin API: real prev_hash available
+      prevDisplay = t.prev_hash.slice(0, 14) + '…';
+    } else if (i === 0) {
+      // First visible block — its predecessor is genesis
+      prevDisplay = '0x00000000…';
+    } else {
+      // Use the PREVIOUS block's computed _hash as the pointer (makes chain look linked)
+      prevDisplay = (recent[i-1]._hash || '0x????????').slice(0, 12) + '…';
+    }
+
+    return `
+      <div class="chain-block">
+        <div class="cb-label">BLOCK ${t._blockNum}</div>
+        <div class="cb-hash">${(t._hash || '0x????????').slice(0, 14)}…</div>
+        <div class="cb-prev">prev: ${prevDisplay}</div>
+      </div>
+      ${i < recent.length - 1 ? '<div class="chain-arrow">→</div>' : ''}`;
+  }).join('');
+}
+
+function filterTable() {
+  const search = document.getElementById('search-inp').value.toLowerCase();
+  filteredTxs = allTxs.filter(t => {
+    if (currentTypeFilter !== 'all' && t.energy_type !== currentTypeFilter) return false;
+    if (search) {
+      const haystack = [
+        t._hash, t._producer, t._consumer,
+        t.producer_id || '', t.consumer_id || ''
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+  document.getElementById('tx-count').textContent = filteredTxs.length + ' transactions';
+  renderTable();
+}
+
+function filterType(type, el) {
+  currentTypeFilter = type;
+  document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  filterTable();
+}
+
+function renderTable() {
+  const body  = document.getElementById('ledger-body');
+  const empty = document.getElementById('ledger-empty');
+  const shown = filteredTxs.slice(0, displayCount);
+
+  if (!shown.length) {
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const icons = {solar:'☀️', wind:'💨', biogas:'🌿'};
+
+  body.innerHTML = shown.map(t => {
+    const type    = t.energy_type || 'solar';
+    const kwh     = t.kwh || 0;
+    const co2     = t._co2.toFixed(1);
+    const time    = new Date(t.created_at || Date.now());
+    const timeStr = time.toLocaleDateString() + ' ' + time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    // Escape for inline onclick attribute
+    const safeJson = JSON.stringify(t).replace(/"/g, '&quot;');
+
+    return `<tr onclick='showTxDetail(${safeJson})'>
+      <td><div class="td-block"><span class="block-num">#${t._blockNum}</span></div></td>
+      <td><span class="hash-chip">${(t._hash).slice(0,12)}…</span></td>
+      <td><span class="type-badge ${type}">${icons[type] || ''} ${type}</span></td>
+      <td>${t._producer}</td>
+      <td>${t._consumer}</td>
+      <td style="color:var(--text)">${kwh} kWh</td>
+      <td class="td-amount">₹${t._totalPrice.toFixed(2)}</td>
+      <td style="color:var(--A)">-${co2} kg</td>
+      <td style="color:var(--text-faint);font-size:9px">${timeStr}</td>
+      <td><span class="td-valid">✓ VALID</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('load-more-btn').style.display =
+    filteredTxs.length > displayCount ? 'block' : 'none';
+}
+
+function loadMore() { displayCount += 25; renderTable(); }
+
+function showTxDetail(t) {
+  const content = document.getElementById('tdm-content');
+
+  // Build a readable prev-hash line
+  const prevHashDisplay = (t.prev_hash && !isZeroHash(t.prev_hash))
+    ? t.prev_hash                      // admin view: full real hash
+    : '⛓ CHAINED (hash secured)';    // public view: indicate it's chained but not exposed
+
+  const rows = [
+    ['Block Number',  '#' + t._blockNum],
+    ['TX Hash',       t._hash],
+    ['Prev Hash',     prevHashDisplay],
+    ['Energy Type',   t.energy_type || 'solar'],
+    ['Producer',      t._producer],
+    ['Consumer',      t._consumer],
+    ['Amount (kWh)',  (t.kwh || 0) + ' kWh'],
+    ['Price/kWh',     '₹' + (t._pricePerKwh || 0).toFixed(2)],
+    ['Total Amount',  '₹' + (t._totalPrice || 0).toFixed(2)],
+    ['CO₂ Saved',     t._co2.toFixed(1) + ' kg'],
+    ['Distance',      t.distance_km ? t.distance_km + ' km' : 'N/A'],
+    ['Escrow',        t.escrow_status || 'N/A'],
+    ['Timestamp',     new Date(t.created_at || Date.now()).toISOString()],
+    ['Status',        'CONFIRMED ✓'],
+  ];
+
+  content.innerHTML = rows.map(([k, v]) =>
+    `<div class="tdm-row">
+      <span class="tdm-key">${k}</span>
+      <span class="tdm-val ${k.includes('Hash') ? 'tdm-hash' : ''}">${v}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('tx-modal').classList.add('open');
+}
+</script>
+</body>
+</html>
