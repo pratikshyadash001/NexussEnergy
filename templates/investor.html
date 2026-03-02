@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEXUS — Investor Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#060918; --bg2:#0B0D20;
+      --surf:rgba(255,255,255,0.04); --surf-h:rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.08); --border-a:rgba(139,92,246,0.30);
+      --A:#8B5CF6; --A-g:rgba(139,92,246,0.18); --A-d:rgba(139,92,246,0.10);
+      --orange:#E8631C; --cyan:#00CED4; --green:#10B981; --rose:#F43F5E; --gold:#F5A623;
+      --text:#EEF2FF; --text-dim:rgba(238,242,255,0.5); --text-faint:rgba(238,242,255,0.25);
+      --sidebar-w:240px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Mulish',sans-serif;overflow:hidden;}
+    ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-thumb{background:var(--border-a);border-radius:2px;}
+    body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 700px 500px at 100% -10%,rgba(139,92,246,0.08) 0%,transparent 60%),
+                 radial-gradient(ellipse 400px 400px at 0% 100%,rgba(0,206,212,0.05) 0%,transparent 60%);}
+
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
+      background:rgba(6,9,24,0.97);border-right:1px solid var(--border-a);
+      display:flex;flex-direction:column;padding:24px 0;z-index:200;backdrop-filter:blur(20px);}
+    .s-brand{display:flex;align-items:center;gap:10px;padding:0 20px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+    .s-brand-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--A),#6D28D9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .s-brand-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;}
+    .s-brand-role{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--A);background:var(--A-d);padding:2px 8px;border-radius:3px;margin-top:3px;}
+    .s-section{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);padding:0 20px 8px;}
+    .nav{display:flex;align-items:center;gap:11px;padding:10px 20px;font-family:'Mulish',sans-serif;font-size:13px;font-weight:500;color:var(--text-dim);cursor:pointer;border-left:2px solid transparent;transition:all 0.15s;}
+    .nav:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+    .nav.on{color:var(--A);border-left-color:var(--A);background:var(--A-d);}
+    .nav .ni{font-size:15px;width:20px;text-align:center;}
+    .s-spacer{flex:1;}
+    .s-user{margin:0 12px 10px;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;gap:10px;}
+    .s-avatar{width:38px;height:38px;background:var(--A-d);border:2px solid var(--border-a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .s-uname{font-family:'Mulish',sans-serif;font-weight:600;font-size:12px;}
+    .s-urole{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--A);background:var(--A-d);padding:2px 7px;border-radius:3px;margin-top:3px;display:inline-block;}
+    .s-logout{margin:0 12px 16px;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.2);border-radius:8px;color:var(--rose);font-family:'Mulish',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+    .s-logout:hover{background:rgba(244,63,94,0.15);}
+
+    .main{margin-left:var(--sidebar-w);height:100vh;overflow-y:auto;padding:28px 28px 40px;position:relative;z-index:10;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+    .page-h{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;}
+    .page-h span{color:var(--A);}
+    .btn-primary{padding:9px 18px;background:linear-gradient(135deg,var(--A),#6D28D9);color:white;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(139,92,246,0.3);}
+
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+    .metric{padding:18px 20px;background:var(--surf);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden;transition:all 0.2s;}
+    .metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--A));}
+    .metric:hover{border-color:var(--border-a);transform:translateY(-2px);}
+    .m-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px;}
+    .m-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;line-height:1;color:var(--mc,var(--A));}
+    .m-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:5px;}
+
+    .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-bottom:18px;}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+    .card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color 0.2s;}
+    .card:hover{border-color:var(--border-a);}
+    .c-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .c-title a{color:var(--A);cursor:pointer;font-size:9px;text-decoration:none;}
+
+    /* INVESTMENT LIST */
+    .inv-list{display:flex;flex-direction:column;gap:10px;}
+    .inv-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all 0.2s;}
+    .inv-card:hover{border-color:var(--border-a);}
+    .inv-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+    .inv-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+    .inv-roi{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green);background:rgba(16,185,129,0.1);padding:3px 8px;border-radius:4px;}
+    .inv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .inv-stat{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .inv-stat span{color:var(--text-dim);display:block;margin-top:2px;font-size:11px;}
+
+    /* OPPORTUNITY LIST */
+    .opp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .opp-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;}
+    .opp-card:hover{border-color:var(--border-a);transform:translateY(-2px);box-shadow:0 8px 24px rgba(139,92,246,0.08);}
+    .opp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .opp-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+    .opp-type{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;}
+    .opp-type.solar{background:rgba(245,166,35,0.12);color:var(--gold);}
+    .opp-type.wind{background:rgba(0,206,212,0.12);color:var(--cyan);}
+    .opp-type.biogas{background:rgba(16,185,129,0.12);color:var(--green);}
+    .opp-raise{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--A);margin-bottom:4px;}
+    .opp-progress-bg{height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin:8px 0;}
+    .opp-progress-fill{height:100%;background:linear-gradient(to right,var(--A),#6D28D9);border-radius:3px;}
+    .opp-meta{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);}
+    .opp-invest-btn{margin-top:10px;width:100%;padding:8px;background:var(--A-d);border:1px solid var(--border-a);color:var(--A);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+    .opp-invest-btn:hover{background:var(--A-g);}
+
+    /* PORTFOLIO CHART */
+    .portfolio-donut{display:flex;align-items:center;gap:24px;}
+    .donut-wrap{position:relative;width:120px;height:120px;flex-shrink:0;}
+    .donut-wrap svg{transform:rotate(-90deg);}
+    .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .donut-total{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--A);}
+    .donut-lbl{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:1px;color:var(--text-faint);}
+    .donut-legend{display:flex;flex-direction:column;gap:8px;}
+    .dl-item{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);}
+    .dl-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(6,9,24,0.85);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--bg2);border:1px solid var(--border-a);border-radius:16px;padding:28px;width:420px;max-width:95vw;}
+    .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;}
+    .modal-sub{font-family:'Mulish',sans-serif;font-size:13px;color:var(--text-dim);margin-bottom:20px;}
+    .form-row{margin-bottom:14px;}
+    .form-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--text-faint);margin-bottom:5px;}
+    .form-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Mulish',sans-serif;font-size:13px;outline:none;transition:border-color 0.2s;}
+    .form-input:focus{border-color:var(--border-a);}
+    .modal-btns{display:flex;gap:10px;}
+    .btn-cancel{flex:1;padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-family:'Mulish',sans-serif;font-size:13px;cursor:pointer;}
+    .btn-confirm{flex:1.5;padding:10px;background:linear-gradient(135deg,var(--A),#6D28D9);border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+    .btn-confirm:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(139,92,246,0.3);}
+    .logout-modal{background:var(--bg2);border:1px solid rgba(244,63,94,0.3);border-radius:16px;padding:28px;width:360px;}
+    .logout-modal .modal-title{color:var(--rose);}
+    .btn-logout-confirm{flex:1.5;padding:10px;background:linear-gradient(135deg,var(--rose),#d63851);border:none;border-radius:8px;color:white;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+
+    .page-sec{display:none;} .page-sec.on{display:block;}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border-a);border-radius:10px;padding:12px 18px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--A);z-index:2000;transform:translateY(100px);opacity:0;transition:all 0.3s;}
+    .toast.show{transform:translateY(0);opacity:1;}
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="s-brand">
+    <div class="s-brand-icon">📈</div>
+    <div>
+      <div class="s-brand-name">NEXUS</div>
+      <div class="s-brand-role">INVESTOR</div>
+    </div>
+  </div>
+  <div class="s-section">Navigation</div>
+  <div class="nav on" onclick="goTo('overview',this)"><span class="ni">📊</span> Portfolio</div>
+  <div class="nav" onclick="goTo('opportunities',this)"><span class="ni">🚀</span> Opportunities</div>
+  <div class="nav" onclick="goTo('investments',this)"><span class="ni">💼</span> My Investments</div>
+  <div class="nav" onclick="goTo('market',this)"><span class="ni">📡</span> Market Data</div>
+  <div class="nav" onclick="goTo('reports',this)"><span class="ni">📋</span> Reports</div>
+  <div class="s-spacer"></div>
+  <div class="s-user">
+    <div class="s-avatar" id="s-avatar">👤</div>
+    <div>
+      <div class="s-uname" id="s-uname">Investor</div>
+      <div class="s-urole">INVESTOR</div>
+    </div>
+  </div>
+  <div class="s-logout" onclick="showLogout()">🚪 Sign Out</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-h" id="page-h">Investment <span>Portfolio</span></div>
+    <button class="btn-primary" onclick="goTo('opportunities',document.querySelectorAll('.nav')[1])">+ Invest Now</button>
+  </div>
+
+  <!-- ── PORTFOLIO OVERVIEW ── -->
+  <section class="page-sec on" id="s-overview">
+    <div class="metrics">
+      <div class="metric">
+        <div class="m-lbl">Total Invested</div>
+        <div class="m-val" id="m-invested">₹0</div>
+        <div class="m-sub" id="m-inv-sub">across all projects</div>
+      </div>
+      <div class="metric" style="--mc:var(--green)">
+        <div class="m-lbl">Total Returns</div>
+        <div class="m-val" id="m-returns">₹0</div>
+        <div class="m-sub" id="m-ret-sub">all time</div>
+      </div>
+      <div class="metric" style="--mc:var(--gold)">
+        <div class="m-lbl">Portfolio ROI</div>
+        <div class="m-val" id="m-roi">0%</div>
+        <div class="m-sub">avg return rate</div>
+      </div>
+      <div class="metric" style="--mc:var(--cyan)">
+        <div class="m-lbl">Active Projects</div>
+        <div class="m-val" id="m-projects">0</div>
+        <div class="m-sub">in portfolio</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="c-title">PORTFOLIO BREAKDOWN</div>
+        <div class="portfolio-donut" id="portfolio-chart">
+          <div class="donut-wrap">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="14"/>
+              <circle cx="60" cy="60" r="48" id="donut-solar" fill="none" stroke="var(--gold)" stroke-width="14"
+                stroke-dasharray="301.6" stroke-dashoffset="0" stroke-linecap="butt"/>
+              <circle cx="60" cy="60" r="48" id="donut-wind" fill="none" stroke="var(--cyan)" stroke-width="14"
+                stroke-dasharray="301.6" stroke-dashoffset="200" stroke-linecap="butt"/>
+              <circle cx="60" cy="60" r="48" id="donut-biogas" fill="none" stroke="var(--green)" stroke-width="14"
+                stroke-dasharray="301.6" stroke-dashoffset="250" stroke-linecap="butt"/>
+            </svg>
+            <div class="donut-center">
+              <div class="donut-total" id="donut-total">₹0</div>
+              <div class="donut-lbl">INVESTED</div>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div class="dl-item"><div class="dl-dot" style="background:var(--gold)"></div>☀️ Solar &nbsp;<span id="dl-solar">0%</span></div>
+            <div class="dl-item"><div class="dl-dot" style="background:var(--cyan)"></div>💨 Wind &nbsp;<span id="dl-wind">0%</span></div>
+            <div class="dl-item"><div class="dl-dot" style="background:var(--green)"></div>🌿 Biogas &nbsp;<span id="dl-biogas">0%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="c-title">RECENT INVESTMENTS</div>
+        <div id="recent-inv-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="c-title">MARKET SUMMARY</div>
+      <div class="grid3" style="margin:0">
+        <div style="text-align:center;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:6px">TOTAL PLATFORM kWh</div>
+          <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--A)" id="stat-kwh">--</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:6px">ACTIVE PRODUCERS</div>
+          <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--green)" id="stat-producers">--</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-faint);margin-bottom:6px">CO₂ SAVED (kg)</div>
+          <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gold)" id="stat-co2">--</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── OPPORTUNITIES ── -->
+  <section class="page-sec" id="s-opportunities">
+    <div class="opp-grid" id="opp-grid"></div>
+  </section>
+
+  <!-- ── MY INVESTMENTS ── -->
+  <section class="page-sec" id="s-investments">
+    <div class="card">
+      <div class="c-title">MY INVESTMENTS <a onclick="loadInvestments()">↻ REFRESH</a></div>
+      <div class="inv-list" id="inv-list"></div>
+    </div>
+  </section>
+
+  <!-- ── MARKET DATA ── -->
+  <section class="page-sec" id="s-market">
+    <div class="card">
+      <div class="c-title">LIVE MARKET DATA</div>
+      <div class="grid3" style="margin:0">
+        <div style="padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gold);margin-bottom:8px">☀️ SOLAR</div>
+          <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--gold)" id="md-solar">₹--</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · weather-adjusted</div>
+        </div>
+        <div style="padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--cyan);margin-bottom:8px">💨 WIND</div>
+          <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--cyan)" id="md-wind">₹--</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · weather-adjusted</div>
+        </div>
+        <div style="padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--green);margin-bottom:8px">🌿 BIOGAS</div>
+          <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--green)" id="md-biogas">₹--</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint);margin-top:4px">per kWh · stable baseload</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── REPORTS ── -->
+  <section class="page-sec" id="s-reports">
+    <div class="card">
+      <div class="c-title">INVESTMENT REPORTS</div>
+      <div style="font-family:'Mulish',sans-serif;font-size:13px;color:var(--text-dim);line-height:1.8;padding:20px 0">
+        <div style="margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          📊 <strong>Monthly ROI Report</strong> — Your portfolio generated <span id="rep-roi" style="color:var(--A)">0%</span> returns this month.
+        </div>
+        <div style="margin-bottom:16px;padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          🌿 <strong>Carbon Impact</strong> — Your investments have enabled <span id="rep-co2" style="color:var(--green)">0 kg</span> of CO₂ savings.
+        </div>
+        <div style="padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+          ⚡ <strong>Energy Facilitated</strong> — Your capital has powered <span id="rep-kwh" style="color:var(--gold)">0 kWh</span> of clean energy.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- INVEST MODAL -->
+<div class="modal-overlay" id="invest-modal">
+  <div class="modal">
+    <div class="modal-title">Invest in Project</div>
+    <div class="modal-sub">in <span id="inv-proj-name" style="color:var(--A)">--</span></div>
+    <div class="form-row">
+      <div class="form-label">INVESTMENT AMOUNT (₹)</div>
+      <input class="form-input" id="inv-amount" type="number" min="1000" step="500" value="5000"/>
+    </div>
+    <div style="padding:10px;background:var(--A-d);border:1px solid var(--border-a);border-radius:8px;margin-bottom:12px;font-size:12px;display:flex;justify-content:space-between;">
+      <span>Rate per kWh:</span>
+      <span id="inv-rate" style="color:var(--A);font-weight:bold;">₹5.00</span>
+    </div>
+    <div style="padding:12px;background:var(--bg);border:1px solid var(--border-a);border-radius:10px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);margin-bottom:6px">
+        <span>Expected ROI</span><span id="inv-roi-preview" style="color:var(--green)">--%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint)">
+        <span>Lock Period</span><span id="inv-lock">6 months</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
+        <span>kWh Funded</span><span id="inv-kwh-preview" style="color:var(--cyan);font-weight:bold;">0 kWh</span>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeInvestModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmInvest()">📈 Confirm Investment</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="modal-overlay" id="logout-modal">
+  <div class="logout-modal modal">
+    <div class="modal-title">Sign Out?</div>
+    <div class="modal-sub">You'll be returned to the login page.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeLogout()">Stay</button>
+      <button class="btn-logout-confirm" onclick="confirmLogout()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let user = JSON.parse(localStorage.getItem('nx_user')||'null');
+let token = localStorage.getItem('nx_token')||'';
+if (!user || !['investor','demo'].includes(user.role)) window.location.href = '/';
+
+document.getElementById('s-uname').textContent = user?.name || 'Investor';
+document.getElementById('s-avatar').textContent = user?.name?.[0]?.toUpperCase() || '📈';
+
+const api = (url, opt={}) => {
+  console.log('API call to:', url);
+  console.log('Using token:', token ? token.substring(0, 20) + '...' : 'No token');
+  return fetch(url, {
+    ...opt, 
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+token,
+      ...(opt.headers||{})
+    }
+  }).then(r => r.json()).catch((err) => {
+    console.error('API error:', err);
+    return {};
+  });
+};
+
+let myInvestments = [];
+let opportunities = [];
+let activeOpp = null;
+let marketRates = { solar: 3.5, wind: 3.2, biogas: 4.0 }; // Default rates
+
+// Function to update kWh preview based on amount and rate
+function updateKwhPreview() {
+  const amount = parseFloat(document.getElementById('inv-amount').value) || 0;
+  const rateText = document.getElementById('inv-rate').textContent;
+  const rate = parseFloat(rateText.replace('₹', '')) || 5.0;
+  const kwh = (amount / rate).toFixed(2);
+  document.getElementById('inv-kwh-preview').textContent = kwh + ' kWh';
+}
+
+// Add event listener for amount input
+document.addEventListener('DOMContentLoaded', function() {
+  const amountInput = document.getElementById('inv-amount');
+  if (amountInput) {
+    amountInput.addEventListener('input', updateKwhPreview);
+  }
+});
+
+(async function init() {
+  try {
+    const [invData, wx, listings] = await Promise.all([
+      api('/api/investments/mine'),
+      api('/api/weather'),
+      api('/api/listings')
+    ]);
+    
+    myInvestments = Array.isArray(invData) ? invData : (invData.investments || []);
+    opportunities = (listings.listings || listings || []).slice(0, 8);
+    
+    // Update market rates with weather data
+    updateMarketRates(wx);
+    
+    updateMetrics();
+    renderRecentInvestments();
+    renderOpportunities();
+    loadPlatformStats();
+  } catch (error) {
+    console.error('Init error:', error);
+  }
+})();
+
+function updateMetrics() {
+  const total = myInvestments.reduce((s,i)=>s+(i.amount_inr || i.amount || 0),0);
+  const returns = myInvestments.reduce((s,i)=>s+(i.returns || 0),0);
+  const roi = total > 0 ? ((returns/total)*100).toFixed(1) : '0.0';
+  
+  document.getElementById('m-invested').textContent = '₹'+total.toLocaleString('en-IN');
+  document.getElementById('m-inv-sub').textContent = myInvestments.length+' investments';
+  document.getElementById('m-returns').textContent = '₹'+returns.toLocaleString('en-IN');
+  document.getElementById('m-ret-sub').textContent = roi+'% overall';
+  document.getElementById('m-roi').textContent = roi+'%';
+  document.getElementById('m-projects').textContent = myInvestments.length;
+  document.getElementById('donut-total').textContent = '₹'+total.toLocaleString('en-IN');
+
+  // Portfolio breakdown
+  const byType = {solar:0, wind:0, biogas:0};
+  myInvestments.forEach(i => { 
+    const type = (i.energy_type || 'solar').toLowerCase();
+    byType[type] += i.amount_inr || i.amount || 0; 
+  });
+  const totalAmt = Object.values(byType).reduce((a,b)=>a+b,1);
+  document.getElementById('dl-solar').textContent = Math.round((byType.solar/totalAmt)*100)+'%';
+  document.getElementById('dl-wind').textContent = Math.round((byType.wind/totalAmt)*100)+'%';
+  document.getElementById('dl-biogas').textContent = Math.round((byType.biogas/totalAmt)*100)+'%';
+}
+
+function renderRecentInvestments() {
+  const c = document.getElementById('recent-inv-list');
+  const recent = myInvestments.slice(0,4);
+  if (!recent.length) {
+    c.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:20px">No investments yet. Explore opportunities!</div>';
+    return;
+  }
+  c.innerHTML = recent.map(i => {
+    const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+    const colors = {solar:'var(--gold)',wind:'var(--cyan)',biogas:'var(--green)'};
+    const type = (i.energy_type || 'solar').toLowerCase();
+    const amount = i.amount_inr || i.amount || 0;
+    const roiPct = i.return_rate || i.roi_pct || 8.5;
+    
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:18px">${icons[type] || '📈'}</div>
+        <div>
+          <div style="font-family:'Mulish',sans-serif;font-size:13px;font-weight:600">${i.project_name || 'Energy Project'}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-faint)">${type} · ${new Date(i.created_at||Date.now()).toLocaleDateString()}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:${colors[type] || 'var(--A)'}">₹${amount.toLocaleString('en-IN')}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green)">${roiPct}% ROI</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderOpportunities() {
+  const c = document.getElementById('opp-grid');
+  
+  if (opportunities.length > 0) {
+    c.innerHTML = opportunities.map(o => {
+      const seeking = o.available_kwh * 1000 || 500000;
+      const raised = Math.round(seeking * 0.4);
+      const pct = Math.round((raised/seeking)*100);
+      const roi = 8.5 + (o.energy_type === 'solar' ? 2 : o.energy_type === 'wind' ? 3 : 1);
+      
+      return `<div class="opp-card">
+        <div class="opp-header">
+          <div class="opp-name">${o.producer_name || 'Energy Project'}</div>
+          <div class="opp-type ${o.energy_type||'solar'}">${o.energy_type||'solar'}</div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-bottom:4px">SEEKING</div>
+        <div class="opp-raise">₹${(seeking/100000).toFixed(1)}L</div>
+        <div class="opp-progress-bg"><div class="opp-progress-fill" style="width:${pct}%"></div></div>
+        <div class="opp-meta">
+          <span>${pct}% funded · ₹${(raised/100000).toFixed(1)}L raised</span>
+          <span>ROI: ${roi.toFixed(1)}%</span>
+        </div>
+        <button class="opp-invest-btn" onclick="openInvestModal({
+          id: '${o.id}',
+          name: '${o.producer_name || 'Energy Project'}',
+          energy_type: '${o.energy_type || 'solar'}',
+          roi_pct: ${roi},
+          lock_months: 6,
+          rate_per_kwh: ${o.current_price || marketRates[o.energy_type] || 5.0}
+        })">📈 Invest</button>
+      </div>`;
+    }).join('');
+  } else {
+    const mockOpps = [
+      {id:'o1',name:'SolarFarm Alpha',energy_type:'solar',roi_pct:14,lock_months:6,rate_per_kwh:3.2},
+      {id:'o2',name:'WindPark Beta',energy_type:'wind',roi_pct:16,lock_months:12,rate_per_kwh:2.8},
+      {id:'o3',name:'BioGas Gamma',energy_type:'biogas',roi_pct:11,lock_months:6,rate_per_kwh:4.0},
+      {id:'o4',name:'SolarPark Delta',energy_type:'solar',roi_pct:15,lock_months:18,rate_per_kwh:3.5},
+    ];
+    
+    c.innerHTML = mockOpps.map(o => {
+      return `<div class="opp-card">
+        <div class="opp-header">
+          <div class="opp-name">${o.name}</div>
+          <div class="opp-type ${o.energy_type}">${o.energy_type}</div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text-faint);margin-bottom:4px">SEEKING</div>
+        <div class="opp-raise">₹5.0L</div>
+        <div class="opp-progress-bg"><div class="opp-progress-fill" style="width:40%"></div></div>
+        <div class="opp-meta">
+          <span>40% funded · ₹2.0L raised</span>
+          <span>ROI: ${o.roi_pct}%</span>
+        </div>
+        <button class="opp-invest-btn" onclick="openInvestModal(${JSON.stringify(o).replace(/"/g,'&quot;')})">📈 Invest</button>
+      </div>`;
+    }).join('');
+  }
+}
+
+function updateMarketRates(wx) {
+  if (!wx) return;
+  
+  const cloud = wx?.clouds || 30;
+  const wind = wx?.wind_speed || 14.4;
+  
+  // Calculate weather-adjusted rates
+  marketRates.solar = Math.max(1.5, Math.min(12, 3.20 + (cloud<20 ? -1.5 : cloud>70 ? 2.5 : 0) - 0.50));
+  marketRates.wind = Math.max(1.5, Math.min(12, 3.80 + (wind>25 ? -2.5 : wind<5 ? 2.2 : 0) - 0.30));
+  marketRates.biogas = 4.30;
+  
+  document.getElementById('md-solar').textContent = '₹'+marketRates.solar.toFixed(2);
+  document.getElementById('md-wind').textContent = '₹'+marketRates.wind.toFixed(2);
+  document.getElementById('md-biogas').textContent = '₹'+marketRates.biogas.toFixed(2);
+}
+
+async function loadPlatformStats() {
+  try {
+    const data = await api('/api/transactions?limit=1000');
+    const txs = data.transactions || data || [];
+    const kwh = txs.reduce((s,t)=>s+(t.kwh||0),0);
+    const co2 = (kwh*0.82).toFixed(0);
+    const producers = new Set(txs.map(t=>t.producer_id)).size;
+    
+    document.getElementById('stat-kwh').textContent = (kwh/1000).toFixed(1)+'k';
+    document.getElementById('stat-producers').textContent = producers || '--';
+    document.getElementById('stat-co2').textContent = (co2/1000).toFixed(1)+'k';
+    document.getElementById('rep-kwh').textContent = kwh+' kWh';
+    document.getElementById('rep-co2').textContent = co2+' kg';
+  } catch (error) {
+    console.error('Error loading platform stats:', error);
+  }
+}
+
+let activeOppData = null;
+
+function openInvestModal(opp) {
+  activeOppData = opp;
+  document.getElementById('inv-proj-name').textContent = opp.name || 'Project';
+  document.getElementById('inv-roi-preview').textContent = (opp.roi_pct || 12) + '%';
+  document.getElementById('inv-lock').textContent = (opp.lock_months || 6) + ' months';
+  
+  // Set the rate per kWh
+  const rate = opp.rate_per_kwh || marketRates[opp.energy_type] || 5.0;
+  document.getElementById('inv-rate').textContent = '₹' + rate.toFixed(2);
+  
+  // Reset amount and update preview
+  document.getElementById('inv-amount').value = '5000';
+  updateKwhPreview();
+  
+  document.getElementById('invest-modal').classList.add('open');
+}
+
+function closeInvestModal() { 
+  document.getElementById('invest-modal').classList.remove('open'); 
+}
+
+async function confirmInvest() {
+  if (!activeOppData) {
+    toast('Please select a project first', false);
+    return;
+  }
+  
+  const amount = parseFloat(document.getElementById('inv-amount').value);
+  if (isNaN(amount) || amount < 1000) {
+    toast('Minimum investment is ₹1000', false);
+    return;
+  }
+  
+  const ratePerKwh = parseFloat(document.getElementById('inv-rate').textContent.replace('₹', ''));
+  
+  const btn = document.querySelector('#invest-modal .btn-confirm');
+  const originalText = btn.textContent;
+  btn.textContent = 'PROCESSING...';
+  btn.disabled = true;
+
+  try {
+    const payload = {
+      listing_id: activeOppData.id,
+      amount: amount,
+      rate_per_kwh: ratePerKwh,
+      energy_type: activeOppData.energy_type || 'solar'
+    };
+    
+    console.log('Sending investment payload:', payload);
+    
+    const res = await api('/api/investments', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.success) {
+      const newInv = {
+        id: 'inv_' + Date.now(),
+        amount_inr: amount,
+        rate_per_kwh: ratePerKwh,
+        kwh_funded: amount / ratePerKwh,
+        energy_type: activeOppData.energy_type || 'solar',
+        project_name: activeOppData.name,
+        return_rate: activeOppData.roi_pct || 8.5,
+        created_at: new Date().toISOString()
+      };
+      
+      myInvestments.unshift(newInv);
+      updateMetrics();
+      renderRecentInvestments();
+      closeInvestModal();
+      toast(`📈 Successfully invested ₹${amount.toLocaleString('en-IN')} in ${activeOppData.name}!`);
+      
+      setTimeout(() => loadInvestments(), 500);
+    } else {
+      console.error('Investment failed:', res);
+      toast(res.error || 'Investment failed. Try again.', false);
+    }
+  } catch (error) {
+    console.error('Investment error:', error);
+    toast('Investment failed: ' + error.message, false);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
+async function loadInvestments() {
+  try {
+    const data = await api('/api/investments/mine');
+    myInvestments = Array.isArray(data) ? data : (data.investments || []);
+    updateMetrics(); 
+    renderRecentInvestments();
+    
+    const c = document.getElementById('inv-list');
+    if (!myInvestments.length) {
+      c.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:30px">No investments yet.</div>';
+      return;
+    }
+    
+    c.innerHTML = myInvestments.map(i => {
+      const icons = {solar:'☀️',wind:'💨',biogas:'🌿'};
+      const type = (i.energy_type || 'solar').toLowerCase();
+      const amount = i.amount_inr || i.amount || 0;
+      const returns = i.returns || 0;
+      const roiPct = i.return_rate || i.roi_pct || 8.5;
+      const kwhFunded = i.kwh_funded || (amount / (i.rate_per_kwh || 5.0)).toFixed(2);
+      
+      return `<div class="inv-card">
+        <div class="inv-header">
+          <div class="inv-name">${icons[type] || '📈'} ${i.project_name || 'Energy Project'}</div>
+          <div class="inv-roi">${roiPct}% ROI</div>
+        </div>
+        <div class="inv-stats">
+          <div class="inv-stat">INVESTED<span>₹${amount.toLocaleString('en-IN')}</span></div>
+          <div class="inv-stat">RETURNS<span style="color:var(--green)">₹${returns.toLocaleString('en-IN')}</span></div>
+          <div class="inv-stat">kWh FUNDED<span style="color:var(--cyan)">${typeof kwhFunded === 'number' ? kwhFunded.toFixed(2) : kwhFunded} kWh</span></div>
+          <div class="inv-stat">RATE<span style="color:var(--gold)}">₹${(i.rate_per_kwh || 5.0).toFixed(2)}/kWh</span></div>
+          <div class="inv-stat">DATE<span>${new Date(i.created_at||Date.now()).toLocaleDateString()}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading investments:', error);
+  }
+}
+
+const headings = {
+  overview:'Investment <span>Portfolio</span>',
+  opportunities:'<span>Investment</span> Opportunities',
+  investments:'My <span>Investments</span>',
+  market:'Market <span>Data</span>',
+  reports:'Investment <span>Reports</span>'
+};
+
+function goTo(sec, el) {
+  document.querySelectorAll('.page-sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+sec)?.classList.add('on');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.getElementById('page-h').innerHTML = headings[sec]||sec;
+  if (sec==='investments') loadInvestments();
+  if (sec==='market') api('/api/weather').then(updateMarketRates);
+}
+
+function showLogout() { document.getElementById('logout-modal').classList.add('open'); }
+function closeLogout() { document.getElementById('logout-modal').classList.remove('open'); }
+
+function confirmLogout() {
+  fetch('/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+token}}).finally(()=>{
+    localStorage.removeItem('nx_user'); localStorage.removeItem('nx_token');
+    window.location.href = '/';
+  });
+}
+
+function toast(msg, ok=true) {
+  const el = document.getElementById('toast');
+  el.style.borderColor = ok?'var(--A)':'var(--rose)';
+  el.style.color = ok?'var(--A)':'var(--rose)';
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+</script>
+</body>
+</html>
